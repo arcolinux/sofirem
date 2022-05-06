@@ -1,0 +1,32 @@
+- name: "Office Applications"
+  description: "Office applications"
+  packages:
+    - abiword
+    - calligra
+    - calligra-plan
+    - calibre
+    - sigil
+    - freeoffice
+    - focuswriter
+    - ghostwriter
+    - gnumeric
+    - libreoffice-fresh
+    - libreoffice-still
+    - ms-office-online
+    - moneydance
+    - onlyoffice-bin
+    - openoffice-bin
+    - scribus
+    - wps-office
+    - wps-office-mime
+    - ttf-wps-fonts
+- name: "PDF applications"
+  description: "PDF applications"
+  packages:
+    - atril
+    - epdfview
+    - evince
+    - okular
+    - pdfarranger
+    - xpdf
+    - xreader

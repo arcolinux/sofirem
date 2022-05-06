@@ -1,0 +1,35 @@
+- name: "Video Software"
+  description: "Primarily Video software"
+  packages:
+    - celluloid
+    - filebot
+    - freetube-bin
+    - guvcview
+    - handbrake
+    - hypnotix
+    - juk
+    - kazam
+    - kdenlive
+    - kodi-x11
+    - kodi
+    - kodi-addons
+    - obs-studio
+    - openshot
+    - makemkv
+    - mkvtoolnix-gui
+    - mpc
+    - mpd
+    - mpv
+    - peek
+    - pitivi
+    - plex-media-player
+    - plex-media-server
+    - qtwebflix-git
+    - simplescreenrecorder
+    - smplayer
+    - spotify
+    - spotifywm-git
+    - vlc
+    - youtube-dl
+    - youtube-dl-gui-git
+    - yt-dlp

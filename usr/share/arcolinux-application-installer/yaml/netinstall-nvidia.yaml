@@ -1,0 +1,22 @@
+- name: "Nvidia-dkms for any linux kernel"
+  description: "Installs nvidia-dkms for any linux kernel"
+  packages:
+    - nvidia-dkms
+    - nvidia-settings
+    - nvidia-utils      
+- name: "Nvidia Related"
+  description: "Nvidia related applications"
+  packages:
+    - bumblebee
+    - cuda
+    - disper
+    - envycontrol
+    - gwe
+    - nvflash
+    - nvidia
+    - nvidia-lts
+    - nvidia-prime
+    - nvidia-xrun
+    - nvtop
+    - optimus-manager
+    - optimus-manager-qt

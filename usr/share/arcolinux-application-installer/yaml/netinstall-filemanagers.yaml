@@ -1,0 +1,11 @@
+- name: "Filemanagers"
+  description: "Filemanagers"
+  packages:
+    - caja
+    - dolphin
+    - mc
+    - nautilus
+    - nemo
+    - nemo-fileroller
+    - pcmanfm
+    - ranger

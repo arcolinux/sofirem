@@ -1,0 +1,5 @@
+- name: "Power Management"
+  description: "Power Management"
+  packages:
+    - upower
+    - system76-power

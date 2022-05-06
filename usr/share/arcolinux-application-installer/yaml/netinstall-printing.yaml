@@ -1,0 +1,4 @@
+- name: "Printing Utilities"
+  description: "Printing software"
+  packages:
+    - hplip

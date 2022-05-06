@@ -1,0 +1,64 @@
+- name: "Application installers/launchers"
+  description: "Application installers or launchers"
+  packages:
+    - albert
+    - arcolinux-pamac-all
+    - appimagelauncher
+    - bauh
+    - flatpak
+    - octopi
+    - pamac-all
+    - pace
+    - paru-bin
+    - pikaur-git
+    - snapd
+    - synapse
+    - trizen
+    - ulauncher
+    - xlunch-git
+    - yay-bin
+- name: "General utilities"
+  description: "Utility software"
+  packages:
+    - auto-cpufreq
+    - bleachbit
+    - btrbk
+    - caffeine
+    - caffeine-ng
+    - catfish
+    - fancontrol-gui-git
+    - galculator
+    - gammy
+    - google-earth-pro
+    - grsync
+    - gufw
+    - linux-wifi-hotspot
+    - mullvad-vpn-bin
+    - noisetorch
+    - pacback
+    - parcellite
+    - piper
+    - powerpill
+    - putty
+    - redshift
+    - simple-scan
+    - slimbookbattery
+    - solaar
+    - stacer
+    - stacer-bin
+    - systemd-manager
+    - tlp
+    - tuxboot
+    - tuxboot-git
+    - vnstat
+    - wacom-utility
+    - wacom-settings-git
+    - wireshark-qt
+    - workrave
+    - wttr
+    - yin-yang-git
+- name: "Ios"
+  description: "Utility software ios"
+  packages:
+    - ifuse
+    - shairport-sync

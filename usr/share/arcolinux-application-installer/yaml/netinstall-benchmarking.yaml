@@ -1,0 +1,7 @@
+- name: "Benchmarking"
+  description: "Utility software benchmarking"
+  packages:
+    - blender-benchmark
+    - geekbench
+    - gputest
+    - phoronix-test-suite

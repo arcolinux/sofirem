@@ -1,0 +1,39 @@
+- name: "Sddm"
+  description: "Installed by default - choose more themes"
+  packages:
+    - sddm
+    - arcolinux-sddm-chili-git
+    - arcolinux-sddm-fralonra-git
+    - arcolinux-sddm-futuristic-git
+    - arcolinux-sddm-materia-git
+    - arcolinux-sddm-redrock-git
+    - arcolinux-sddm-simplicity-git    
+    - arcolinux-sddm-slice-git
+    - arcolinux-sddm-sugar-candy-git
+    - arcolinux-sddm-urbanlifestyle-git
+    - simplicity-sddm-theme-git
+- name: "Lightdm"
+  description: "Installs lightdm"
+  packages:
+    - lightdm
+    - lightdm-gtk-greeter
+    - lightdm-gtk-greeter-settings
+    - lightdm-webkit-theme-aether
+    - lightdm-webkit2-theme-reactive
+    - arcolinux-wallpapers-git
+    - lightdm-slick-greeter
+- name: "Gdm"
+  description: "Installs gdm"
+  packages:
+    - gdm
+    - arcolinux-wallpapers-git
+- name: "Lxdm"
+  description: "Installs lxdm"
+  packages:
+    - lxdm
+    - arcolinux-wallpapers-git
+- name: "Ly"
+  description: "Installs ly"
+  packages:
+    - ly
+    - arcolinux-wallpapers-git

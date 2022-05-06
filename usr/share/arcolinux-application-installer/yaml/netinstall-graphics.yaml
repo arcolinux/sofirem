@@ -1,0 +1,9 @@
+- name: "Graphics"
+  description: "Graphics"
+  packages:
+    - blender
+    - darktable
+    - digikam
+    - gimp
+    - inkscape
+    - krita
