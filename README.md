@@ -1,1 +1,1 @@
-# ArcoLinux alacritty
+# Sofirem

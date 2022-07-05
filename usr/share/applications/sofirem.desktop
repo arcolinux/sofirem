@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Sofirem - Software installer/remover for Arch Linux based systems
+GenericName=Sofirem
+X-GNOME-FullName=Sofirem
+Comment=Software installer/remover for Arch Linux based systems
+Exec=/usr/bin/sofirem
+Icon=sofirem
+Terminal=false
+Type=Application
+Categories=GTK;GNOME;Utility;Settings;Security;X-GNOME-Settings-Panel;X-GNOME-SystemSettings;X-Unity-Settings-Panel;X-XFCE-SettingsDialog;X-XFCE-SystemSettings;
+Keywords=application;installer;
+StartupNotify=true
