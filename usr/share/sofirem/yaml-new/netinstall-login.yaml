@@ -1,0 +1,50 @@
+- name: "Login Manager: Sddm"
+  description: "Installed by default - choose more themes"
+  critical: false
+  hidden: false
+  selected: false
+  packages:
+    - sddm
+    - arcolinux-sddm-futuristic-git
+    - arcolinux-sddm-materia-git
+    - arcolinux-sddm-simplicity-git    
+    - arcolinux-sddm-slice-git
+    - arcolinux-sddm-sugar-candy-git
+    - arcolinux-sddm-urbanlifestyle-git
+- name: "Login Manager: Lightdm"
+  description: "Installs lightdm"
+  critical: false
+  hidden: false
+  selected: false
+  packages:
+    - lightdm
+    - lightdm-gtk-greeter
+    - lightdm-gtk-greeter-settings
+    - lightdm-webkit-theme-aether
+    - lightdm-webkit2-theme-reactive
+    - arcolinux-wallpapers-git
+    - lightdm-slick-greeter
+- name: "Login Manager: Gdm"
+  description: "Installs gdm"
+  critical: false
+  hidden: false
+  selected: false
+  packages:
+    - gdm
+    - arcolinux-wallpapers-git
+- name: "Login Manager: Lxdm"
+  description: "Installs lxdm"
+  critical: false
+  hidden: false
+  selected: false
+  packages:
+    - lxdm
+    - arcolinux-wallpapers-git
+- name: "Login Manager: Ly"
+  description: "Installs ly"
+  critical: false
+  hidden: false
+  selected: false
+  packages:
+    - ly
+    - arcolinux-wallpapers-git

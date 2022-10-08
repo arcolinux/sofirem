@@ -1,0 +1,28 @@
+- name: "Audio Software"
+  description: "Primarily Audio software"
+  packages:
+    - ardour
+    - audacious
+    - audacious-plugins
+    - audacity
+    - byte
+    - cava
+    - clementine
+    - curseradio-git
+    - deadbeef
+    - elisa
+    - gmusicbrowser
+    - juk
+    - kwave
+    - lollypop
+    - lxmusic
+    - lmms
+    - ncmpcpp
+    - pragha
+    - radiotray
+    - rhythmbox
+    - sayonara-player
+    - soundconverter
+    - spotify
+    - spotifywm-git
+    - tauon-music-box

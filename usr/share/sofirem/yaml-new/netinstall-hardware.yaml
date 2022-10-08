@@ -1,0 +1,29 @@
+- name: "Hardware"
+  description: "Hardware discovery"
+  packages:
+    - alsi
+    - archey3
+    - bottom
+    - btop
+    - cpufetch-git
+    - cpu-x
+    - dmidecode
+    - glances
+    - gotop-bin
+    - gsmartcontrol
+    - gtop
+    - hddtemp
+    - htop
+    - lm_sensors
+    - lshw
+    - nvtop
+    - nvtop-git
+    - ookla-speedtest-bin
+    - pfetch
+    - powertop
+    - screenfetch
+    - slurm
+    - speedtest-cli-git
+    - s-tui
+    - sysprof
+    - ufetch-git

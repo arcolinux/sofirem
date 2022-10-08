@@ -1,1 +1,1 @@
-Simple backup tool, that hides the complexity of backing up the Right Way and uses duplicity as the backend
+A trivial-to-use personal backup tool to protect against accidental data loss

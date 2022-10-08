@@ -1,0 +1,11 @@
+- name: "Android"
+  description: "Utility software for android"
+  packages:
+    - airdroid-nativefier
+    - android-tools
+    - android-file-transfer
+    - android-sdk-platform-tools
+    - droidcam
+    - qtscrcpy
+    - scrcpy
+    - waydroid

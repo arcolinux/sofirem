@@ -151,7 +151,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
     #hbox3 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
 
     #hbox3.pack_start(btnReCache, False, False, 0)
-    
+
     ivbox.pack_start(image, False, False, 0)
     ivbox.pack_start(stack_switcher, True, True, 0)
 
@@ -160,10 +160,9 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
 
     vbox1.pack_start(hbox0, False, False, 0)
     vbox1.pack_start(stack, True, True, 0)
-    
+
     hbox.pack_start(ivbox, False, True, 0)
     hbox.pack_start(vbox1, True, True, 0)
 
     stack.set_hhomogeneous(False)
     stack.set_vhomogeneous(False)
-    
