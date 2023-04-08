@@ -1,8 +1,17 @@
 - name: "Fonts"
   description: "Fonts"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
+    - adobe-source-sans-fonts
+    - adobe-source-sans-pro-fonts
     - awesome-terminal-fonts
+    - libertinus-font
+    - lohit-fonts
     - nerd-fonts-source-code-pro
+    - noto-fonts
     - ttf-anonymous-pro
     - ttf-bitstream-vera
     - ttf-caladea
@@ -10,12 +19,15 @@
     - ttf-cascadia-code
     - ttf-cormorant
     - ttf-croscore
+    - ttf-dejavu
+    - ttf-droid
     - ttf-eurof
     - ttf-fantasque-sans-mono
     - ttf-fira-code
     - ttf-fira-mono
     - ttf-fira-sans
     - ttf-font-awesome
+    - ttf-hack    
     - ttf-hactor
     - ttf-hellvetica
     - ttf-ibm-plex
@@ -27,9 +39,13 @@
     - ttf-linux-libertine
     - ttf-linux-libertine-g
     - ttf-meslo-nerd-font-powerlevel10k
+    - ttf-mac-fonts
     - ttf-monofur
     - ttf-ms-fonts
-    - ttf-nerd-fonts-symbols
-    - ttf-nerd-fonts-symbols-mono
+    - ttf-nerd-fonts-symbols-1000-em
+    - ttf-nerd-fonts-symbols-1000-em-mono
     - ttf-opensans
     - ttf-proggy-clean
+    - ttf-roboto
+    - ttf-roboto-mono    
+    - ttf-ubuntu-font-family

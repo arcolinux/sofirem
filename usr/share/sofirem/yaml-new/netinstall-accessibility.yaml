@@ -1,9 +1,0 @@
-- name: "Accessibility Utilities"
-  description: "Accessibility Utility software"
-  packages:
-    - brltty
-    - espeak-ng
-    - florence    
-    - mousetweaks
-    - onboard
-    - orca

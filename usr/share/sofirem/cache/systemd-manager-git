@@ -1,0 +1,1 @@
+A systemd service manager written in Rust with the GTK-rs wrapper and direct integration with dbus

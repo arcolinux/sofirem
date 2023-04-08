@@ -1,6 +1,19 @@
+- name: "ArcoLinux Third Party Packages"
+  description: "ArcoLinux third party packages"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - arcolinux-pamac-all
 - name: "ArcoLinux Meta Packages"
   description: "ArcoLinux meta packages"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
+    - arcolinux-meta-arc-theme
     - arcolinux-meta-asian-fonts
     - arcolinux-meta-fun
     - arcolinux-meta-log
@@ -13,41 +26,116 @@
     - arcolinux-meta-wine
 - name: "ArcoLinux Applications"
   description: "ArcoLinux applications"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
+    - archlinux-logout-git
+    - archlinux-tweak-tool-git
     - arcolinux-desktop-trasher-git    
     - arcolinux-reflector-simple-git
     - arcolinux-teamviewer
     - arcolinux-tellme-git
-    - archlinux-tweak-tool-git
+    - arcolinux-xlunch-git
+- name: "ArcoLinux Arc Theming"
+  description: "ArcoLinux arc theming packages"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - arcolinux-arc-aqua-git
+    - arcolinux-arc-archlinux-blue-git
+    - arcolinux-arc-arcolinux-blue-git
+    - arcolinux-arc-azul-git
+    - arcolinux-arc-azure-dodger-blue-git
+    - arcolinux-arc-blood-git
+    - arcolinux-arc-blue-sky-git
+    - arcolinux-arc-botticelli-git
+    - arcolinux-arc-bright-lilac-git
+    - arcolinux-arc-bright-lime-green-git
+    - arcolinux-arc-carnation-git
+    - arcolinux-arc-carolina-blue-git
+    - arcolinux-arc-casablanca-git
+    - arcolinux-arc-crimson-git
+    - arcolinux-arc-dawn-git
+    - arcolinux-arc-emerald-git
+    - arcolinux-arc-evopop-git
+    - arcolinux-arc-fern-git
+    - arcolinux-arc-fire-git
+    - arcolinux-arc-froly-git
+    - arcolinux-arc-havelock-git
+    - arcolinux-arc-hibiscus-git
+    - arcolinux-arc-light-blue-grey-git
+    - arcolinux-arc-light-blue-surfn-git
+    - arcolinux-arc-light-salmon-git
+    - arcolinux-arc-mandy-git
+    - arcolinux-arc-mantis-git
+    - arcolinux-arc-medium-blue-git
+    - arcolinux-arc-niagara-git
+    - arcolinux-arc-nice-blue-git
+    - arcolinux-arc-numix-git
+    - arcolinux-arc-orchid-git
+    - arcolinux-arc-pale-grey-git
+    - arcolinux-arc-paper-git
+    - arcolinux-arc-pink-git
+    - arcolinux-arc-polo-git
+    - arcolinux-arc-punch-git
+    - arcolinux-arc-red-orange-git
+    - arcolinux-arc-rusty-orange-git
+    - arcolinux-arc-sky-blue-git
+    - arcolinux-arc-slate-grey-git
+    - arcolinux-arc-smoke-git
+    - arcolinux-arc-soft-blue-git
+    - arcolinux-arc-tacao-git
+    - arcolinux-arc-tangerine-git
+    - arcolinux-arc-tory-git
+    - arcolinux-arc-warm-pink-git
 - name: "ArcoLinux Theming"
   description: "ArcoLinux theming packages"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
     - arcolinux-candy-beauty-git
     - arcolinux-arc-kde
-    - arcolinux-arc-themes-2021-creative-git
-    - arcolinux-arc-themes-2021-git
-    - arcolinux-arc-themes-2021-sky-git
     - arcolinux-mint-y-icons-git
     - arcolinux-paleofetch-git
     - arcolinux-plank-git
     - arcolinux-plank-themes-git
 - name: "ArcoLinux Wallpapers"
   description: "ArcoLinux wallpapers"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
-    - arcolinux-sddm-backgrounds-git
+    - archlinux-login-backgrounds-git
     - arcolinux-wallpapers-git
     - arcolinux-wallpapers-candy-git
     - arcolinux-wallpapers-dual-git
 - name: "ArcoLinux Sddm themes"
   description: "ArcoLinux Sddm themes"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
-    - arcolinux-sddm-backgrounds-git
-    - arcolinux-sddm-chili-git
-    - arcolinux-sddm-fralonra-git
+    - archlinux-login-backgrounds-git
     - arcolinux-sddm-futuristic-git
     - arcolinux-sddm-materia-git
-    - arcolinux-sddm-redrock-git
     - arcolinux-sddm-simplicity-git    
     - arcolinux-sddm-slice-git
     - arcolinux-sddm-sugar-candy-git
     - arcolinux-sddm-urbanlifestyle-git
+- name: "Packages that will install plasma as a dependency"
+  description: "Plasma related"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - arcolinux-sddm-breeze-git
+    - arcolinux-sddm-breeze-minimal-git

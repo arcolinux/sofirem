@@ -1,18 +1,101 @@
 - name: "Terminals"
   description: "Terminals"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
     - alacritty
+    - alacritty-themes
+    - base16-alacritty-git
     - gnome-terminal
     - gnome-terminal-transparency
     - guake
     - kitty
     - konsole
     - lxterminal
+    - nautilus-open-any-terminal
     - oh-my-zsh-powerline-theme-git
+    - prot16-xfce4-terminal
+    - rxvt-unicode
     - sakura
+    - tabby-bin
+    - tempus-themes-xfce4-terminal-git
     - terminator
     - termite
     - tilix
     - tilda
     - tmux
+    - urxvt-fullscreen
+    - urxvt-perls
+    - urxvt-resize-font-git
+    - xfce4-terminal
+    - xfce4-terminal-base16-colors-git
     - zsh-theme-powerlevel10k-git
+- name: "Terminal Tools To Search"
+  description: "Terminal tools to search"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - ripgrep
+    - ripgrep-all
+    - the_platinum_searcher-bin
+    - the_silver_searcher
+- name: "Terminal Fun"
+  description: "Terminal fun"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - asciiquarium
+    - bash-pipes
+    - boxes
+    - bpytop
+    - cava
+    - c-lolcat
+    - cool-retro-term
+    - cowfortune
+    - cmatrix-git
+    - cpufetch-git
+    - curseradio-git
+    - cxxmatrix-git
+    - figlet
+    - gotop-bin
+    - inetutils
+    - lolcat
+    - mc
+    - nixieclock
+    - pipes.sh
+    - pfetch
+    - python-pywal
+    - ranger
+    - sl
+    - slurm
+    - sparklines-git
+    - toilet
+    - tty-clock
+    - ufetch-git
+    - ufetch-arco-git
+    - unimatrix-git
+    - wttr
+- name: "Zsh"
+  description: "Zsh"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - zsh
+    - zsh-autosuggestions-git
+    - zsh-completions
+    - zsh-fast-syntax-highlighting
+    - zsh-history-substring-search-git
+    - zsh-syntax-highlighting
+    - zsh-syntax-highlighting-git
+    - zsh-theme-powerlevel10k-git
+    - arcolinux-zsh-git
+    - oh-my-zsh-git
+    - oh-my-zsh-powerline-theme-git

@@ -1,13 +1,20 @@
 - name: "Browsers"
   description: "Browsers"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
     - brave-bin
+    - chrome-gnome-shell
     - chromium
+    - chromium-widevine
     - falkon
     - firefox
     - firefox-adblock-plus
     - firefox-ublock-origin
     - google-chrome
+    - icecat
     - librewolf-bin
     - midori
     - min
@@ -20,11 +27,16 @@
     - vivaldi-widevine
 - name: "Downloaders"
   description: "Downloaders"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
     - aria2
     - deluge
     - filezilla
     - fragments
+    - freedownloadmanager
     - gdown
     - jdownloader2
     - ktorrent
@@ -34,6 +46,10 @@
     - xdman
 - name: "Cloud Software"
   description: "Cloud software"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
     - dropbox
     - insync
@@ -41,8 +57,23 @@
     - nextcloud-client
 - name: "Mail Clients"
   description: "Mail clients"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
   packages:
     - evolution
     - geary
     - mailspring    
     - thunderbird
+- name: "Vpn Software"
+  description: "Vpn Software"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - mullvad-vpn-bin
+    - nordtray-bin
+    - nordpass-bin
+    - nordvpn-bin

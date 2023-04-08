@@ -1,7 +1,0 @@
-- name: "Backlight"
-  description: "Backlight"
-  packages:
-    - acpilight
-    - brightnessctl
-    - gummy
-    - light

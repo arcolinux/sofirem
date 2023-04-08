@@ -1,0 +1,22 @@
+- name: "Desktop: Hyprland - Wayland"
+  description: "Installs hyprland - only on real metal - not with nvidia gpu driver"
+  critical: false
+  hidden: false
+  selected: false
+  immutable: false
+  expanded: true
+  packages:
+    - arcolinux-hyprland-git
+    - arcolinux-hyprland-profile-git
+    - arcolinux-wayland-profile-git
+- name: "Desktop: Sway - Wayland"
+  description: "Installs sway - only on real metal - not with nvidia gpu driver"
+  critical: false
+  hidden: false
+  selected: false
+  immutable: false
+  expanded: true
+  packages:
+    - arcolinux-sway-git
+    - arcolinux-sway-profile-git
+    - arcolinux-wayland-profile-git

@@ -1,7 +1,0 @@
-- name: "Git"
-  description: "Git applications"
-  packages:
-    - gitahead-bin
-    - gitg
-    - gitfiend
-    - gitkraken
