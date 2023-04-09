@@ -6,15 +6,13 @@ import os
 import sys
 import shutil
 import psutil
+import time
 import datetime
 from datetime import datetime, timedelta
-
-# import time
 import subprocess
 import threading  # noqa
 import gi
 import requests
-import time
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 
@@ -37,19 +35,32 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 sudo_username = os.getlogin()
 home = "/home/" + str(sudo_username)
 packages = []
+debug = False
 # =====================================================
 #               Create log file
 # =====================================================
 
 log_dir = "/var/log/sofirem/"
-sof_log_dir = "/var/log/sofirem/sof/"
+sof_log_dir = "/var/log/sofirem/software/"
 
 
-def create_log(self):
-    print("Making log in /var/log/sofirem")
-    now = datetime.datetime.now()
+def create_packages_log():
+    print("Making log in /var/log/sofirem/software - currently installed")
+    now = datetime.now()
     time = now.strftime("%Y-%m-%d-%H-%M-%S")
-    destination = sof_log_dir + "sof-log-" + time
+    destination = sof_log_dir + "software-log-" + time
+    command = "sudo pacman -Q > " + destination
+    subprocess.call(
+        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
+    # GLib.idle_add(show_in_app_notification, self, "Log file created")
+
+
+def create_actions_log():
+    print("Making log in /var/log/sofirem/ - Sofirem log")
+    now = datetime.now()
+    time = now.strftime("%Y-%m-%d-%H-%M-%S")
+    destination = sof_log_dir + "sofirem-log-" + time
     command = "sudo pacman -Q > " + destination
     subprocess.call(
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -305,6 +316,9 @@ def cache(package, path):
     try:
         # first we need to strip the new line escape sequence to ensure we don't get incorrect outcome
         pkg = package.strip()
+        # you can see all the errors here with the print command below
+        if debug == True:
+            print(pkg)
         # create the query
         query_str = ["pacman", "-Si", pkg, " --noconfirm"]
 
@@ -313,7 +327,6 @@ def cache(package, path):
         process = subprocess.Popen(
             query_str, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
-
         out, err = process.communicate()
 
         # validate the process result
@@ -338,7 +351,34 @@ def cache(package, path):
                 file.close()
 
                 return description
-        return "No Description Found"
+        # There are several packages that do not return a valid process return code
+        # Cathing those manually via corrections folder
+        if process.returncode != 0:
+            exceptions = [
+                "florence",
+                "mintstick-bin",
+                "arcolinux-conky-collection-plasma-git",
+                "arcolinux-desktop-trasher-git",
+                "arcolinux-pamac-all",
+                "arcolinux-sddm-simplicity-git",
+                "ttf-hack",
+                "ttf-roboto-mono",
+                "aisleriot",
+                "mailspring",
+                "linux-rt",
+                "linux-rt-headers",
+                "linux-rt-lts",
+                "linux-rt-lts-headers",
+                "arcolinux-sddm-simplicity-git",
+                "kodi-x11",
+                "kodi-addons",
+                "sardi-icons",
+            ]
+            if pkg in exceptions:
+                description = file_lookup(pkg, path + "corrections/")
+                return description
+        return "No Description Foundd"
+
     except Exception as e:
         print("Exception in cache(): %s " % e)
 
@@ -362,7 +402,10 @@ def file_lookup(package, path):
     # first we need to strip the new line escape sequence to ensure we don't get incorrect outcome
     pkg = package.strip("\n")
     output = ""
-    filename = path + pkg
+    if os.path.exists(path + "corrections/" + pkg):
+        filename = path + "corrections/" + pkg
+    else:
+        filename = path + pkg
     file = open(filename, "r")
     output = file.read()
     file.close()
@@ -397,6 +440,7 @@ def restart_program():
 
 def check_github(yaml_files):
     # This is the link to the location where the .yaml files are kept in the github
+    # Removing desktop wayland, desktop, drivers, nvidia, ...
     path = base_dir + "/cache/"
     link = "https://github.com/arcolinux/arcob-calamares-config-awesome/tree/master/calamares/modules/"
     urls = []
@@ -481,6 +525,24 @@ def checkPackageInstalled(pkg):
             return False
     except Exception as e:
         print("Exception in checkPackageInstalled(): %s", e)
+
+
+# =====================================================
+#               MESSAGEBOX
+# =====================================================
+
+
+def messageBox(self, title, message):
+    md2 = Gtk.MessageDialog(
+        parent=self,
+        flags=0,
+        message_type=Gtk.MessageType.INFO,
+        buttons=Gtk.ButtonsType.OK,
+        text=message,
+    )
+    md2.format_secondary_markup(message)
+    md2.run()
+    md2.destroy()
 
 
 #######ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!

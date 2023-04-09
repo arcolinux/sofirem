@@ -1,36 +1,3 @@
-- name: "Themes"
-  description: "Themes"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - adapta-gtk-theme
-    - arc-darkest-theme-git
-    - arcolinux-arc-kde
-    - arcolinux-sweet-mars-git
-    - ayu-theme
-    - breeze
-    - dracula-gtk-theme
-    - fluent-gtk-theme
-    - fluent-kde-theme-git
-    - graphite-gtk-theme-git
-    - kripton-theme-git
-    - kvantum-theme-materia
-    - kvantum-theme-qogir-git
-    - layan-gtk-theme-git
-    - layan-kde-git
-    - materia-gtk-theme
-    - materia-kde
-    - nordic-kde-git
-    - numix-gtk-theme-git
-    - openbox-themes-pambudi-git
-    - orchis-kde-theme-git
-    - orchis-theme-git
-    - plata-theme
-    - qogir-gtk-theme-git
-    - sweet-theme-git
-    - sweet-gtk-theme-dark
 - name: "Icons"
   description: "Icons"
   critical: false
@@ -66,12 +33,69 @@
     - papirus-linux-universe
     - papirus-nord
     - qogir-icon-theme
+    - sardi-icons
+    - sardi-colora-variations-icons-git
+    - sardi-flat-colora-variations-icons-git
+    - sardi-flat-mint-y-icons-git
+    - sardi-flat-mixing-icons-git
+    - sardi-flexible-colora-variations-icons-git
+    - sardi-flexible-luv-colora-variations-icons-git
+    - sardi-flexible-mint-y-icons-git
+    - sardi-flexible-mixing-icons-git
+    - sardi-flexible-variations-icons-git
+    - sardi-ghost-flexible-colora-variations-icons-git
+    - sardi-ghost-flexible-mint-y-icons-git
+    - sardi-ghost-flexible-mixing-icons-git
+    - sardi-ghost-flexible-variations-icons-git
+    - sardi-mint-y-icons-git
+    - sardi-mixing-icons-git
+    - sardi-mono-colora-variations-icons-git
+    - sardi-mono-mint-y-icons-git
+    - sardi-mono-mixing-icons-git
+    - sardi-mono-numix-colora-variations-icons-git
+    - sardi-mono-papirus-colora-variations-icons-git
+    - sardi-orb-colora-mint-y-icons-git
+    - sardi-orb-colora-mixing-icons-git
+    - sardi-orb-colora-variations-icons-git
     - surfn-mint-y-icons-git
     - tela-circle-icon-theme-git
     - vimix-icon-theme-git
     - we10x-icon-theme-git
     - whitesur-icon-theme-git
     - zafiro-icon-theme
+- name: "Themes"
+  description: "Themes"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - adapta-gtk-theme
+    - arc-darkest-theme-git
+    - arcolinux-arc-kde
+    - arcolinux-sweet-mars-git
+    - ayu-theme
+    - breeze
+    - dracula-gtk-theme
+    - fluent-gtk-theme
+    - fluent-kde-theme-git
+    - graphite-gtk-theme-git
+    - kripton-theme-git
+    - kvantum-theme-materia
+    - kvantum-theme-qogir-git
+    - layan-gtk-theme-git
+    - layan-kde-git
+    - materia-gtk-theme
+    - materia-kde
+    - nordic-kde-git
+    - numix-gtk-theme-git
+    - openbox-themes-pambudi-git
+    - orchis-kde-theme-git
+    - orchis-theme-git
+    - plata-theme
+    - qogir-gtk-theme-git
+    - sweet-theme-git
+    - sweet-gtk-theme-dark
 - name: "Cursors"
   description: "Cursors"
   critical: false
@@ -98,37 +122,7 @@
     - xcursor-neutral
     - xcursor-premium
     - xcursor-simpleandsoft
-- name: "Sardi icons"
-  description: "Sardi icons"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - sardi-colora-variations-icons-git
-    - sardi-flat-colora-variations-icons-git
-    - sardi-flat-mint-y-icons-git
-    - sardi-flat-mixing-icons-git
-    - sardi-flexible-colora-variations-icons-git
-    - sardi-flexible-luv-colora-variations-icons-git
-    - sardi-flexible-mint-y-icons-git
-    - sardi-flexible-mixing-icons-git
-    - sardi-flexible-variations-icons-git
-    - sardi-ghost-flexible-colora-variations-icons-git
-    - sardi-ghost-flexible-mint-y-icons-git
-    - sardi-ghost-flexible-mixing-icons-git
-    - sardi-ghost-flexible-variations-icons-git
-    - sardi-mint-y-icons-git
-    - sardi-mixing-icons-git
-    - sardi-mono-colora-variations-icons-git
-    - sardi-mono-mint-y-icons-git
-    - sardi-mono-mixing-icons-git
-    - sardi-mono-numix-colora-variations-icons-git
-    - sardi-mono-papirus-colora-variations-icons-git
-    - sardi-orb-colora-mint-y-icons-git
-    - sardi-orb-colora-mixing-icons-git
-    - sardi-orb-colora-variations-icons-git
-- name: "Changing the look"
+- name: "Looks"
   description: "Changing the look"
   critical: false
   hidden: false
@@ -143,12 +137,3 @@
     - picom-jonaburg-git
     - picom-ibhagwan-git
     - picom-git
-- name: "Packages that will install plasma as a dependency"
-  description: "Plasma related"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - qogir-kde-theme-git
-    - sweet-kde-theme-mars-git

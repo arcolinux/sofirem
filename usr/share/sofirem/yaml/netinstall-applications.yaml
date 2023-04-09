@@ -5,21 +5,48 @@
   selected: false
   expanded: true
   packages:
+    - arcolinux-plank-themes-git
+    - baobab
+    - bitwarden
+    - brasero
+    - brltty
     - cheese
+    - enpass-bin
+    - espeak-ng
+    - etcher-bin
+    - flameshot-git
+    - florence
     - font-manager-git
     - galculator
+    - gitahead-bin
+    - gitfiend
+    - gitg
+    - github-desktop-bin
+    - gitkraken
     - gpick
-    - flameshot-git
+    - imagewriter
+    - keepassxc
+    - lastpass
     - liferea
-    - mediainfo-gui
     - mcomix
+    - mediainfo-gui
+    - mintstick-bin
+    - mintstick-git
+    - mousetweaks
     - nitrogen
     - nomacs
+    - onboard
+    - orca
     - pdfarranger
     - plank
-    - arcolinux-plank-themes-git
+    - privoxy
     - screenkey-git
+    - tor
+    - tor-browser
     - variety
+    - ventoy-bin
+    - woeusb
+    - xfburn
 - name: "Conky"
   description: "Conky and conky collection"
   critical: false
@@ -28,83 +55,7 @@
   expanded: true
   packages:
     - arcolinux-conky-collection-git
+    - arcolinux-conky-collection-plasma-git
     - arcolinux-pipemenus-git
     - conky-lua-archers
     - yad
-- name: "Git"
-  description: "Git applications"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - gitahead-bin
-    - gitg
-    - gitfiend
-    - github-desktop-bin
-    - gitkraken
-- name: "Password Manager"
-  description: "Password managers"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - bitwarden
-    - enpass-bin
-    - keepassxc
-    - lastpass
-- name: "Privacy"
-  description: "Applications that ensure your privacy"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - tor-browser
-    - tor
-    - privoxy
-- name: "Virtualbox for Linux kernel"
-  description: "Installs virtualbox for linux kernel"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: false
-  packages:
-    - virtualbox
-    - virtualbox-host-dkms
-    - linux
-    - linux-headers
-- name: "Virtualbox for Linux-lts kernel"
-  description: "Installs virtualbox for linux-lts kernel"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: false
-  packages:
-    - virtualbox
-    - virtualbox-host-dkms
-    - linux-lts
-    - linux-lts-headers
-- name: "Vmware"
-  description: "Installs vmware software"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: false
-  packages:
-    - open-vm-tools
-    - vmware-workstation
-    - vmware-keymaps
-- name: "Qemu software"
-  description: "Installs qemu software"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: false
-  packages:
-    - qemu-base
-    - qemu-full
-    - quickemu
-    - quickemu-git
-    - quickgui-bin

@@ -1,5 +1,5 @@
 - name: "Terminals"
-  description: "Terminals"
+  description: "Terminals + search tools"
   critical: false
   hidden: false
   selected: false
@@ -17,14 +17,18 @@
     - nautilus-open-any-terminal
     - oh-my-zsh-powerline-theme-git
     - prot16-xfce4-terminal
+    - ripgrep
+    - ripgrep-all
     - rxvt-unicode
     - sakura
     - tabby-bin
     - tempus-themes-xfce4-terminal-git
     - terminator
     - termite
-    - tilix
+    - the_platinum_searcher-bin
+    - the_silver_searcher
     - tilda
+    - tilix
     - tmux
     - urxvt-fullscreen
     - urxvt-perls
@@ -32,17 +36,6 @@
     - xfce4-terminal
     - xfce4-terminal-base16-colors-git
     - zsh-theme-powerlevel10k-git
-- name: "Terminal Tools To Search"
-  description: "Terminal tools to search"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - ripgrep
-    - ripgrep-all
-    - the_platinum_searcher-bin
-    - the_silver_searcher
 - name: "Terminal Fun"
   description: "Terminal fun"
   critical: false

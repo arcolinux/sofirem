@@ -4,6 +4,7 @@ import gi
 import Functions
 from ProgressBarWindow import ProgressBarWindow
 import signal
+import datetime
 import GUI
 import subprocess
 from Functions import os
@@ -18,11 +19,18 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GdkPixbuf, Pango, GLib  # noqa
 
 #      #============================================================
-#      #=          Authors:  Erik Dubois - Cameron Percival        =
+#      #=  Authors:  Erik Dubois - Cameron Percival   - Fennec     =
 #      #============================================================
 
+# Folder structure
+
+# cache contains descriptions - inside we have corrections for manual intervention
+# + installed applications list
+# yaml is the folder that is used to create the application
+# yaml-awesome is a copy/paste from Calamares to meld manually - not used in the app
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
+debug = True
 
 
 class Main(Gtk.Window):
@@ -143,6 +151,8 @@ class Main(Gtk.Window):
 
     def on_close(self, widget):
         os.unlink("/tmp/sofirem.lock")
+        os.unlink("/tmp/sofirem.pid")
+
         Gtk.main_quit()
         print(
             "---------------------------------------------------------------------------"
@@ -233,6 +243,7 @@ class Main(Gtk.Window):
 def signal_handler(sig, frame):
     print("\nSofirem is closing.")
     os.unlink("/tmp/sofirem.lock")
+    os.unlink("/tmp/sofirem.pid")
     Gtk.main_quit(0)
 
 
@@ -255,6 +266,8 @@ if __name__ == "__main__":
             w = Main()
             w.show_all()
 
+            Functions.create_packages_log()
+
             print(
                 "[INFO] %s App Started" % Functions.datetime.now().strftime("%H:%M:%S")
             )
@@ -269,7 +282,7 @@ if __name__ == "__main__":
             )
             md.format_secondary_markup(
                 "The lock file has been found. This indicates there is already an instance of <b>Sofirem</b> running.\n\
-    click yes to remove the lock file and try running again"
+Click 'Yes' to remove the lock file and try running again"
             )  # noqa
 
             result = md.run()
@@ -282,10 +295,21 @@ if __name__ == "__main__":
                     pid = line.rstrip().lstrip()
 
                 if Functions.checkIfProcessRunning(int(pid)):
-                    Functions.MessageBox(
-                        "Application Running!",
-                        "You first need to close the existing application",
-                    )  # noqa
+                    # needs to be fixed - todo
+
+                    # md2 = Gtk.MessageDialog(
+                    #     parent=Main,
+                    #     flags=0,
+                    #     message_type=Gtk.MessageType.INFO,
+                    #     buttons=Gtk.ButtonsType.OK,
+                    #     title="Application Running!",
+                    #     text="You first need to close the existing application",
+                    # )
+                    # md2.format_secondary_markup(
+                    #     "You first need to close the existing application"
+                    # )
+                    # md2.run()
+                    print("You first need to close the existing application")
                 else:
                     os.unlink("/tmp/sofirem.lock")
     except Exception as e:

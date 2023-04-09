@@ -1,15 +1,142 @@
-- name: "Utilities for Timeshift and Btrfs"
+- name: "Utilities"
   description: "Utility software"
   critical: false
   hidden: false
   selected: false
   expanded: true
   packages:
-    - grub-btrfs
-    - timeshift
-    - timeshift-autosnap
-- name: "Utilities for Snapper and Btrfs"
-  description: "Utility software"
+    - acpilight
+    - airdroid-nativefier
+    - albert
+    - alsi
+    - android-file-transfer
+    - android-sdk-platform-tools
+    - android-tools
+    - appimagelauncher
+    - archey3
+    - aura-bin
+    - auto-cpufreq
+    - bauh
+    - betterlockscreen
+    - betterlockscreen-git
+    - bleachbit
+    - blender-benchmark
+    - bottom
+    - brightnessctl
+    - brillo
+    - btop
+    - btrbk
+    - caffeine
+    - caffeine-ng
+    - catfish
+    - ckb-next-git
+    - cpu-x
+    - cpufetch-git
+    - cpuid
+    - debtap
+    - deja-dup
+    - dmidecode
+    - downgrade
+    - droidcam
+    - duf
+    - fancontrol-gui-git
+    - find-the-command-git
+    - fingerprint-gui
+    - flatpak
+    - flavours
+    - galculator
+    - gammy
+    - geekbench
+    - glances
+    - gnome-disk-utility
+    - gnome-software
+    - gnome-software-packagekit-plugin
+    - google-earth-pro
+    - gotop-bin
+    - gputest
+    - grsync
+    - grub-customizer
+    - gsmartcontrol
+    - gtop
+    - gufw
+    - gummy
+    - hardcode-fixer-git
+    - hardinfo-gtk3
+    - hddtemp
+    - htop
+    - hw-probe
+    - ifuse
+    - inxi
+    - kbackup
+    - konsave
+    - light
+    - linux-wifi-hotspot
+    - lm_sensors
+    - lshw
+    - neofetch
+    - nvtop
+    - nvtop-git
+    - octopi
+    - ookla-speedtest-bin
+    - pacback
+    - pace
+    - pace-git
+    - pacseek-bin
+    - pacui
+    - pacui-git
+    - parcellite
+    - paru
+    - paru-bin
+    - paru-git
+    - pfetch
+    - phoronix-test-suite
+    - pikaur-git
+    - piper
+    - power-profiles-daemon
+    - powerpill
+    - powertop
+    - putty
+    - qtscrcpy
+    - rate-mirrors
+    - rate-mirrors-bin
+    - redshift
+    - s-tui
+    - scrcpy
+    - screenfetch
+    - shairport-sync
+    - simple-scan
+    - slimbookbattery
+    - slurm
+    - snapd
+    - solaar
+    - speedtest-cli-git
+    - stacer
+    - stacer-bin
+    - synapse
+    - sysprof
+    - system76-power
+    - systemd-manager-git
+    - tlp
+    - topgrade
+    - trizen
+    - tuxboot
+    - tuxboot-git
+    - ufetch-git
+    - ulauncher
+    - upower
+    - vnstat
+    - wacom-settings-git
+    - waydroid
+    - wireshark-qt
+    - workrave
+    - wttr
+    - xlunch-git
+    - yay
+    - yay-bin
+    - yay-git
+    - yin-yang-git
+- name: "Btrfs"
+  description: "Utility software for Brfs"
   critical: false
   hidden: false
   selected: false
@@ -22,199 +149,5 @@
     - snapper
     - snapper-support
     - snapper-tools
-- name: "Utilities for Android"
-  description: "Utility software android"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - airdroid-nativefier
-    - android-tools
-    - android-file-transfer
-    - android-sdk-platform-tools
-    - droidcam
-    - qtscrcpy
-    - scrcpy
-    - waydroid
-- name: "Utilities for IOS"
-  description: "Utility software ios"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - ifuse
-    - shairport-sync
-- name: "Utilities for benchmarking"
-  description: "Utility software benchmarking"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - blender-benchmark
-    - geekbench
-    - gputest
-    - phoronix-test-suite
-- name: "Application installers or launchers"
-  description: "Application installers or launchers"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - albert
-    - appimagelauncher
-    - aura-bin
-    - bauh
-    - flatpak
-    - gnome-software
-    - gnome-software-packagekit-plugin
-    - octopi
-    - pace
-    - pace-git
-    - pacui
-    - pacui-git
-    - pacseek-bin
-    - paru
-    - paru-bin
-    - paru-git
-    - pikaur-git
-    - rate-mirrors
-    - rate-mirrors-bin
-    - snapd
-    - synapse
-    - topgrade
-    - trizen
-    - ulauncher
-    - xlunch-git
-    - yay
-    - yay-bin
-    - yay-git
-- name: "Power Management"
-  description: "Power Management"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - upower
-    - system76-power
-- name: "Backlight"
-  description: "Backlight"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - acpilight
-    - brightnessctl
-    - brillo
-    - gummy
-    - light
-- name: "Utilities for hardware discovery"
-  description: "Utility software for hardware discovery"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - alsi
-    - archey3
-    - bottom
-    - btop
-    - cpufetch-git
-    - cpuid
-    - cpu-x
-    - dmidecode
-    - duf
-    - glances
-    - gnome-disk-utility
-    - gotop-bin
-    - gsmartcontrol
-    - gtop
-    - hddtemp
-    - htop
-    - hw-probe
-    - inxi
-    - lm_sensors
-    - lshw
-    - neofetch
-    - nvtop
-    - nvtop-git
-    - ookla-speedtest-bin
-    - pfetch
-    - powertop
-    - screenfetch
-    - slurm
-    - speedtest-cli-git
-    - s-tui
-    - sysprof
-    - ufetch-git
-- name: "Utilities Kernels"
-  description: "Utility software kernels"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - mkinitcpio-firmware
-    - modprobed-db
-    - modprobed-db-git
-- name: "Utilities"
-  description: "Utility software"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - auto-cpufreq
-    - betterlockscreen
-    - betterlockscreen-git
-    - bleachbit
-    - btrbk
-    - caffeine
-    - caffeine-ng
-    - catfish
-    - ckb-next-git
-    - debtap
-    - deja-dup
-    - downgrade
-    - fancontrol-gui-git
-    - find-the-command-git
-    - fingerprint-gui
-    - flavours
-    - hardcode-fixer-git
-    - galculator
-    - gammy
-    - google-earth-pro
-    - grsync
-    - grub-customizer
-    - gufw
-    - hardinfo-gtk3
-    - kbackup
-    - konsave
-    - linux-wifi-hotspot
-    - pacback
-    - parcellite
-    - piper
-    - power-profiles-daemon
-    - powerpill
-    - putty
-    - redshift
-    - simple-scan
-    - slimbookbattery
-    - solaar
-    - stacer
-    - stacer-bin
-    - systemd-manager-git
-    - tlp
-    - tuxboot
-    - tuxboot-git
-    - vnstat
-    - wacom-settings-git
-    - wireshark-qt
-    - workrave
-    - wttr
-    - yin-yang-git
+    - timeshift
+    - timeshift-autosnap

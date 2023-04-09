@@ -1,0 +1,17 @@
+- name: "Virtual Machines"
+  description: "Installs virtual Machines for Linux"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: false
+  packages:
+    - virtualbox
+    - virtualbox-host-dkms
+    - open-vm-tools
+    - vmware-workstation
+    - vmware-keymaps
+    - qemu-base
+    - qemu-full
+    - quickemu
+    - quickemu-git
+    - quickgui-bin
