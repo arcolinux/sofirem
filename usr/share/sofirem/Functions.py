@@ -22,6 +22,7 @@ from gi.repository import GLib, Gtk  # noqa
 from queue import Queue  # Multithreading the caching
 from threading import Thread
 from ProgressBarWindow import ProgressBarWindow
+from sofirem import launchtime
 
 # =====================================================
 #               Base Directory
@@ -42,30 +43,39 @@ debug = False
 
 log_dir = "/var/log/sofirem/"
 sof_log_dir = "/var/log/sofirem/software/"
+act_log_dir = "/var/log/sofirem/actions/"
 
 
 def create_packages_log():
-    print("Making log in /var/log/sofirem/software - currently installed")
-    now = datetime.now()
-    time = now.strftime("%Y-%m-%d-%H-%M-%S")
-    destination = sof_log_dir + "software-log-" + time
+    now = datetime.now().strftime("%H:%M:%S")
+    print("[INFO] " + now + " Creating a log file in /var/log/sofirem/software")
+    destination = sof_log_dir + "software-log-" + launchtime
     command = "sudo pacman -Q > " + destination
     subprocess.call(
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     )
-    # GLib.idle_add(show_in_app_notification, self, "Log file created")
-
-
-def create_actions_log():
-    print("Making log in /var/log/sofirem/ - Sofirem log")
-    now = datetime.now()
-    time = now.strftime("%Y-%m-%d-%H-%M-%S")
-    destination = sof_log_dir + "sofirem-log-" + time
-    command = "sudo pacman -Q > " + destination
-    subprocess.call(
-        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    create_actions_log(
+        launchtime,
+        "[INFO] %s Creating a log file in /var/log/sofirem/software " % now + "\n",
     )
     # GLib.idle_add(show_in_app_notification, self, "Log file created")
+
+
+def create_actions_log(launchtime, message):
+    if not os.path.exists(act_log_dir + launchtime):
+        try:
+            with open(act_log_dir + launchtime, "x", encoding="utf8") as f:
+                f.close
+        except Exception as error:
+            print(error)
+
+    if os.path.exists(act_log_dir + launchtime):
+        try:
+            with open(act_log_dir + launchtime, "a", encoding="utf-8") as f:
+                f.write(message)
+                f.close()
+        except Exception as error:
+            print(error)
 
 
 # =====================================================
@@ -125,10 +135,11 @@ def permissions(dst):
 def sync():
     try:
         sync_str = ["pacman", "-Sy"]
-
-        print(
-            "[INFO] %s Synchronising package databases"
-            % datetime.now().strftime("%H:%M:%S")
+        now = datetime.now().strftime("%H:%M:%S")
+        print("[INFO] %s Synchronising package databases" % now)
+        create_actions_log(
+            launchtime,
+            "[INFO] %s Synchronising package databases " % now + "\n",
         )
 
         # Pacman will not work if there is a lock file
@@ -164,26 +175,33 @@ def install(queue):
 
             inst_str = ["pacman", "-S", pkg, "--needed", "--noconfirm"]
 
-            print(
-                "[INFO] %s Installing package %s: "
-                % (datetime.now().strftime("%H:%M:%S"), pkg)
+            now = datetime.now().strftime("%H:%M:%S")
+            print("[INFO] %s Installing package %s " % (now, pkg))
+            create_actions_log(
+                launchtime, "[INFO] " + now + " Installing package " + pkg + "\n"
             )
 
-            process_pkg_inst = subprocess.run(
+            process_pkg_inst = subprocess.Popen(
                 inst_str,
                 shell=False,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                timeout=60,
             )
 
+            out, err = process_pkg_inst.communicate(timeout=60)
+
             if process_pkg_inst.returncode == 0:
-                print("[INFO] Package install completed")
+                print(
+                    "[INFO] %s Package install completed"
+                    % datetime.now().strftime("%H:%M:%S")
+                )
                 print(
                     "---------------------------------------------------------------------------"
                 )
             else:
                 print("[ERROR] Package install failed")
+                if out:
+                    print(out.decode("utf-8"))
                 print(
                     "---------------------------------------------------------------------------"
                 )
@@ -210,35 +228,40 @@ def uninstall(queue):
                 path = base_dir + "/cache/installed.lst"
                 uninst_str = ["pacman", "-Rs", pkg, "--noconfirm"]
 
-                print(
-                    "[INFO] %s Removing package : %s"
-                    % (datetime.now().strftime("%H:%M:%S"), pkg)
+                now = datetime.now().strftime("%H:%M:%S")
+                print("[INFO] %s Removing package : %s" % (now, pkg))
+                create_actions_log(
+                    launchtime, "[INFO] " + now + " Removing package " + pkg + "\n"
                 )
 
-                process_pkg_rem = subprocess.run(
+                process_pkg_rem = subprocess.Popen(
                     uninst_str,
                     shell=False,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT,
-                    timeout=60,
                 )
+
+                out, err = process_pkg_rem.communicate(timeout=60)
 
                 if process_pkg_rem.returncode == 0:
                     print(
-                        "[INFO] %s Package removal completed",
-                        datetime.now().strftime("%H:%M:%S"),
+                        "[INFO] %s Package removal completed"
+                        % datetime.now().strftime("%H:%M:%S"),
                     )
                     print(
                         "---------------------------------------------------------------------------"
                     )
                 else:
                     print(
-                        "[ERROR] %s Package removal failed",
-                        datetime.now().strftime("%H:%M:%S"),
+                        "[ERROR] %s Package removal failed"
+                        % datetime.now().strftime("%H:%M:%S"),
                     )
+                    if out:
+                        print(out.decode("utf-8"))
                     print(
                         "---------------------------------------------------------------------------"
                     )
+
                     raise SystemError("Pacman failed to remove package = %s" % pkg)
 
     except Exception as e:
@@ -377,7 +400,7 @@ def cache(package, path):
             if pkg in exceptions:
                 description = file_lookup(pkg, path + "corrections/")
                 return description
-        return "No Description Foundd"
+        return "No Description Found"
 
     except Exception as e:
         print("Exception in cache(): %s " % e)
@@ -387,9 +410,17 @@ def cache(package, path):
 def cache_btn(path, progressbar):
     fraction = 1 / len(packages)
     # Non Multithreaded version.
+    packages.sort()
+    number = 1
     for pkg in packages:
+        print(str(number) + "/" + str(len(packages)) + ": Caching " + pkg)
         cache(pkg, base_dir + path)
+        number = number + 1
         progressbar.timeout_id = GLib.timeout_add(50, progressbar.update, fraction)
+
+    print(
+        "[INFO] Caching applications finished  " + datetime.now().strftime("%H:%M:%S")
+    )
 
     # This will need to be coded to be running multiple processes eventually, since it will be manually invoked.
     # process the file list
@@ -438,20 +469,20 @@ def restart_program():
     os.execl(python, python, *sys.argv)
 
 
-def check_github(yaml_files):
-    # This is the link to the location where the .yaml files are kept in the github
-    # Removing desktop wayland, desktop, drivers, nvidia, ...
-    path = base_dir + "/cache/"
-    link = "https://github.com/arcolinux/arcob-calamares-config-awesome/tree/master/calamares/modules/"
-    urls = []
-    fns = []
-    for file in yaml_files:
-        if isfileStale(path + file, 14, 0, 0):
-            fns.append(path + file)
-            urls.append(link + file)
-    if len(fns) > 0 & len(urls) > 0:
-        inputs = zip(urls, fns)
-        download_parallel(inputs)
+# def check_github(yaml_files):
+#     # This is the link to the location where the .yaml files are kept in the github
+#     # Removing desktop wayland, desktop, drivers, nvidia, ...
+#     path = base_dir + "/cache/"
+#     link = "https://github.com/arcolinux/arcob-calamares-config-awesome/tree/master/calamares/modules/"
+#     urls = []
+#     fns = []
+#     for file in yaml_files:
+#         if isfileStale(path + file, 14, 0, 0):
+#             fns.append(path + file)
+#             urls.append(link + file)
+#     if len(fns) > 0 & len(urls) > 0:
+#         inputs = zip(urls, fns)
+#         download_parallel(inputs)
 
 
 def download_url(args):

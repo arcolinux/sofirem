@@ -35,7 +35,6 @@
     - urxvt-resize-font-git
     - xfce4-terminal
     - xfce4-terminal-base16-colors-git
-    - zsh-theme-powerlevel10k-git
 - name: "Terminal Fun"
   description: "Terminal fun"
   critical: false
@@ -73,7 +72,6 @@
     - ufetch-git
     - ufetch-arco-git
     - unimatrix-git
-    - wttr
 - name: "Zsh"
   description: "Zsh"
   critical: false

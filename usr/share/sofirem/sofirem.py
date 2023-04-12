@@ -14,6 +14,7 @@ import App_Frame_GUI
 # from Functions import install_alacritty, os, pacman
 from subprocess import PIPE, STDOUT
 from time import sleep
+from datetime import datetime
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GdkPixbuf, Pango, GLib  # noqa
@@ -31,6 +32,9 @@ from gi.repository import Gtk, Gdk, GdkPixbuf, Pango, GLib  # noqa
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 debug = True
+now = datetime.now()
+global launchtime
+launchtime = now.strftime("%Y-%m-%d-%H-%M-%S")
 
 
 class Main(Gtk.Window):
@@ -46,7 +50,7 @@ class Main(Gtk.Window):
         self.connect("delete-event", self.on_close)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_icon_from_file(os.path.join(base_dir, "images/sofirem.png"))
-        self.set_default_size(800, 900)
+        self.set_default_size(1100, 900)
 
         print(
             "---------------------------------------------------------------------------"
@@ -77,32 +81,6 @@ class Main(Gtk.Window):
         print(
             "---------------------------------------------------------------------------"
         )
-        # run pacman -Sy to sync pacman db, else you get a lot of 404 errors
-
-        if Functions.sync() == 0:
-            print(
-                "[INFO] %s Synchronising complete"
-                % Functions.datetime.now().strftime("%H:%M:%S")
-            )
-            print(
-                "---------------------------------------------------------------------------"
-            )
-        else:
-            print(
-                "[ERROR] %s Synchronising failed"
-                % Functions.datetime.now().strftime("%H:%M:%S")
-            )
-            print(
-                "---------------------------------------------------------------------------"
-            )
-
-        splScr = Splash.splashScreen()
-
-        while Gtk.events_pending():
-            Gtk.main_iteration()
-
-        sleep(2)
-        splScr.destroy()
 
         if not os.path.isdir(Functions.log_dir):
             try:
@@ -115,6 +93,42 @@ class Main(Gtk.Window):
                 os.mkdir(Functions.sof_log_dir)
             except Exception as e:
                 print(e)
+
+        if not os.path.isdir(Functions.act_log_dir):
+            try:
+                os.mkdir(Functions.act_log_dir)
+            except Exception as e:
+                print(e)
+
+        # run pacman -Sy to sync pacman db, else you get a lot of 404 errors
+
+        if Functions.sync() == 0:
+            now = datetime.now().strftime("%H:%M:%S")
+            print("[INFO] %s Synchronising complete" % now)
+            Functions.create_actions_log(
+                launchtime,
+                "[INFO] %s Synchronising complete" % now + "\n",
+            )
+        else:
+            now = datetime.now().strftime("%H:%M:%S")
+            print(
+                "[ERROR] %s Synchronising failed" % now,
+            )
+            Functions.create_actions_log(
+                launchtime,
+                "[ERROR] %s Synchronising failed" % now + "\n",
+            )
+            print(
+                "---------------------------------------------------------------------------"
+            )
+
+        splScr = Splash.splashScreen()
+
+        while Gtk.events_pending():
+            Gtk.main_iteration()
+
+        sleep(2)
+        splScr.destroy()
 
         if not Functions.os.path.isdir(Functions.home + "/.config/sofirem"):
 
@@ -137,9 +151,20 @@ class Main(Gtk.Window):
 
         print("[INFO] %s Preparing GUI" % Functions.datetime.now().strftime("%H:%M:%S"))
 
+        Functions.create_actions_log(
+            launchtime,
+            "[INFO] %s Preparing GUI" % Functions.datetime.now().strftime("%H:%M:%S")
+            + "\n",
+        )
         gui = GUI.GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
 
         print("[INFO] %s Completed GUI" % Functions.datetime.now().strftime("%H:%M:%S"))
+
+        Functions.create_actions_log(
+            launchtime,
+            "[INFO] %s Completed GUI" % Functions.datetime.now().strftime("%H:%M:%S")
+            + "\n",
+        )
 
         if not os.path.isfile("/tmp/sofirem.lock"):
             with open("/tmp/sofirem.lock", "w") as f:
@@ -149,7 +174,7 @@ class Main(Gtk.Window):
     #               RESTART/QUIT BUTTON
     # =====================================================
 
-    def on_close(self, widget):
+    def on_close(self, widget, data):
         os.unlink("/tmp/sofirem.lock")
         os.unlink("/tmp/sofirem.pid")
 
@@ -195,8 +220,6 @@ class Main(Gtk.Window):
                 th.daemon = True
                 th.start()
 
-                self.pkg_queue.put(None)
-
             # Functions.install(package)
         else:
             # Uninstall the package
@@ -216,8 +239,6 @@ class Main(Gtk.Window):
                 th.daemon = True
                 th.start()
 
-                self.pkg_queue.put(None)
-
                 # Functions.uninstall(package)
         Functions.get_current_installed(path)
         # App_Frame_GUI.GUI(self, Gtk, vboxStack1, Functions, category, package_file)
@@ -232,7 +253,17 @@ class Main(Gtk.Window):
         pb.show_all()
         # pb.set_text("Updating Cache")
         # pb.reset_timer()
-        Functions.cache_btn("cache/", pb)
+        print(
+            "[INFO] %s Recache applications"
+            % Functions.datetime.now().strftime("%H:%M:%S")
+        )
+        Functions.create_actions_log(
+            launchtime,
+            "[INFO] %s Recache applications"
+            % Functions.datetime.now().strftime("%H:%M:%S")
+            + "\n",
+        )
+        Functions.cache_btn("/cache/", pb)
 
 
 # ====================================================================
@@ -270,6 +301,11 @@ if __name__ == "__main__":
 
             print(
                 "[INFO] %s App Started" % Functions.datetime.now().strftime("%H:%M:%S")
+            )
+            Functions.create_actions_log(
+                launchtime,
+                "[INFO] %s App Started" % Functions.datetime.now().strftime("%H:%M:%S")
+                + "\n",
             )
             Gtk.main()
         else:

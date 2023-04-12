@@ -1,3 +1,34 @@
+- name: "Themes"
+  description: "Themes"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - adapta-gtk-theme
+    - arc-darkest-theme-git
+    - arcolinux-arc-kde
+    - arcolinux-sweet-mars-git
+    - ayu-theme
+    - breeze
+    - dracula-gtk-theme
+    - fluent-gtk-theme
+    - fluent-kde-theme-git
+    - graphite-gtk-theme-git
+    - kripton-theme-git
+    - layan-gtk-theme-git
+    - layan-kde-git
+    - materia-gtk-theme
+    - materia-kde
+    - nordic-kde-git
+    - numix-gtk-theme-git
+    - openbox-themes-pambudi-git
+    - orchis-kde-theme-git
+    - orchis-theme-git
+    - plata-theme
+    - qogir-gtk-theme-git
+    - sweet-theme-git
+    - sweet-gtk-theme-dark
 - name: "Icons"
   description: "Icons"
   critical: false
@@ -57,45 +88,17 @@
     - sardi-orb-colora-mint-y-icons-git
     - sardi-orb-colora-mixing-icons-git
     - sardi-orb-colora-variations-icons-git
+    - surfn-icons-git
+    - surfn-arc-breeze-icons-git
     - surfn-mint-y-icons-git
+    - surfn-plasma-dark-icons-git
+    - surfn-plasma-dark-tela-icons-git
+    - surfn-plasma-light-icons-git
     - tela-circle-icon-theme-git
     - vimix-icon-theme-git
     - we10x-icon-theme-git
     - whitesur-icon-theme-git
     - zafiro-icon-theme
-- name: "Themes"
-  description: "Themes"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - adapta-gtk-theme
-    - arc-darkest-theme-git
-    - arcolinux-arc-kde
-    - arcolinux-sweet-mars-git
-    - ayu-theme
-    - breeze
-    - dracula-gtk-theme
-    - fluent-gtk-theme
-    - fluent-kde-theme-git
-    - graphite-gtk-theme-git
-    - kripton-theme-git
-    - kvantum-theme-materia
-    - kvantum-theme-qogir-git
-    - layan-gtk-theme-git
-    - layan-kde-git
-    - materia-gtk-theme
-    - materia-kde
-    - nordic-kde-git
-    - numix-gtk-theme-git
-    - openbox-themes-pambudi-git
-    - orchis-kde-theme-git
-    - orchis-theme-git
-    - plata-theme
-    - qogir-gtk-theme-git
-    - sweet-theme-git
-    - sweet-gtk-theme-dark
 - name: "Cursors"
   description: "Cursors"
   critical: false
@@ -132,6 +135,7 @@
     - kvantum
     - kvantum-qt5-git
     - kvantum-qt6-git
+    - kvantum-theme-materia
     - kvantum-theme-qogir-git
     - picom
     - picom-jonaburg-git

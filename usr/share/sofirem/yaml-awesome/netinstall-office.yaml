@@ -100,7 +100,6 @@
   selected: false
   packages:
     - atril
-    - epdfview
     - evince
     - okular
     - pdfarranger

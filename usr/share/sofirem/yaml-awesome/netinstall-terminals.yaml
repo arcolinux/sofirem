@@ -31,7 +31,6 @@
     - urxvt-resize-font-git
     - xfce4-terminal
     - xfce4-terminal-base16-colors-git
-    - zsh-theme-powerlevel10k-git
 - name: "Terminal Tools To Search"
   description: "Terminal tools to search"
   critical: false

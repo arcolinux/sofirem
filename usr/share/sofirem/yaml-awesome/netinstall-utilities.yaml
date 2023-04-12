@@ -151,7 +151,6 @@
     - speedtest-cli-git
     - s-tui
     - sysprof
-    - ufetch-git
 - name: "Utilities Kernels"
   description: "Utility software kernels"
   critical: false
@@ -216,5 +215,4 @@
     - wacom-settings-git
     - wireshark-qt
     - workrave
-    - wttr
     - yin-yang-git

@@ -105,7 +105,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         yaml_files = sorted(yaml_files_unsorted)
 
         # Check github for updated files
-        Functions.check_github(yaml_files)
+        # Functions.check_github(yaml_files)
         # ==========================================================
         #                       GENERATE STACK
         # ==========================================================
@@ -186,7 +186,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         # =====================================================
         btnQuitSofi = Gtk.Button(label="Quit")
         btnQuitSofi.set_size_request(100, 30)
-        btnQuitSofi.connect("clicked", self.on_close)
+        btnQuitSofi.connect("clicked", self.on_close, "delete-event")
 
         # =====================================================
         #                      PACKS
@@ -202,7 +202,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         ivbox.pack_start(stack_switcher, True, True, 0)
 
         # ivbox.pack_start(hbox2, False, False, 0)
-        #ivbox.pack_start(btnReCache, False, False, 0)
+        ivbox.pack_start(btnReCache, False, False, 0)
         ivbox.pack_start(btnQuitSofi, False, False, 0)
 
         vbox1.pack_start(hbox0, False, False, 0)
