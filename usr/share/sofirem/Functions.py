@@ -37,6 +37,7 @@ sudo_username = os.getlogin()
 home = "/home/" + str(sudo_username)
 packages = []
 debug = False
+
 # =====================================================
 #               Create log file
 # =====================================================
@@ -58,7 +59,9 @@ def create_packages_log():
         launchtime,
         "[INFO] %s Creating a log file in /var/log/sofirem/software " % now + "\n",
     )
-    # GLib.idle_add(show_in_app_notification, self, "Log file created")
+    # GLib.idle_add(
+    #     show_in_app_notification, "is already installed - nothing to do", "test"
+    # )
 
 
 def create_actions_log(launchtime, message):
@@ -207,6 +210,18 @@ def install(queue):
                 )
                 raise SystemError("Pacman failed to install package = %s" % pkg)
 
+            # logging
+            now = datetime.now().strftime("%H:%M:%S")
+            print("[INFO] %s Creating installed.lst file after installing" % (now))
+            create_actions_log(
+                launchtime,
+                "[INFO] "
+                + now
+                + " Creating installed.lst file after installing "
+                + "\n",
+            )
+            get_current_installed()
+
     except Exception as e:
         print("Exception in install(): %s" % e)
     except SystemError as s:
@@ -264,6 +279,15 @@ def uninstall(queue):
 
                     raise SystemError("Pacman failed to remove package = %s" % pkg)
 
+            # logging
+            now = datetime.now().strftime("%H:%M:%S")
+            print("[INFO] %s Creating installed.lst file after removing" % (now))
+            create_actions_log(
+                launchtime,
+                "[INFO] " + now + " Creating installed.lst file after removing " + "\n",
+            )
+            get_current_installed()
+
     except Exception as e:
         print("Exception in uninstall(): %s" % e)
     except SystemError as s:
@@ -277,7 +301,8 @@ def uninstall(queue):
 # =====================================================
 
 
-def get_current_installed(path):
+def get_current_installed():
+    path = base_dir + "/cache/installed.lst"
     # query_str = "pacman -Q > " + path
     query_str = ["pacman", "-Q"]
     # run the query - using Popen because it actually suits this use case a bit better.
@@ -306,10 +331,10 @@ def query_pkg(package):
 
         if os.path.exists(path):
             if isfileStale(path, 0, 0, 30):
-                get_current_installed(path)
+                get_current_installed()
         # file does NOT exist;
         else:
-            get_current_installed(path)
+            get_current_installed()
         # then, open the resulting list in read mode
         with open(path, "r") as f:
 
@@ -485,23 +510,23 @@ def restart_program():
 #         download_parallel(inputs)
 
 
-def download_url(args):
-    t0 = time.time()
-    url, fn = args[0], args[1]
-    try:
-        r = requests.get(url)
-        with open(fn, "wb") as f:
-            f.write(r.content)
-        return (url, time.time() - t0)
-    except Exception as e:
-        print("Exception in download_url():", e)
+# def download_url(args):
+#     t0 = time.time()
+#     url, fn = args[0], args[1]
+#     try:
+#         r = requests.get(url)
+#         with open(fn, "wb") as f:
+#             f.write(r.content)
+#         return (url, time.time() - t0)
+#     except Exception as e:
+#         print("Exception in download_url():", e)
 
 
-def download_parallel(args):
-    cpus = cpu_count()
-    results = ThreadPool(cpus - 1).imap_unordered(download_url, args)
-    for result in results:
-        print("url:", result[0], "time (s):", result[1])
+# def download_parallel(args):
+#     cpus = cpu_count()
+#     results = ThreadPool(cpus - 1).imap_unordered(download_url, args)
+#     for result in results:
+#         print("url:", result[0], "time (s):", result[1])
 
 
 # =====================================================
@@ -574,6 +599,33 @@ def messageBox(self, title, message):
     md2.format_secondary_markup(message)
     md2.run()
     md2.destroy()
+
+
+# =====================================================
+#               NOTIFICATIONS
+# =====================================================
+
+
+# def show_in_app_notification(self, message):
+#     if self.timeoutnot_id is not None:
+#         GLib.source_remove(self.timeoutnot_id)
+#         self.timeoutnot_id = None
+
+#     self.notification_label.set_markup(
+#         '<span foreground="white">' + message + "</span>"
+#     )
+#     self.notification_revealer.set_reveal_child(True)
+#     self.timeoutnot_id = GLib.timeout_add(3000, timeOut, self)
+
+
+# def timeOut(self):
+#     close_in_app_notification(self)
+
+
+# def close_in_app_notification(self):
+#     self.notification_revealer.set_reveal_child(False)
+#     GLib.source_remove(self.timeoutnot_id)
+#     self.timeoutnot_id = None
 
 
 #######ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!

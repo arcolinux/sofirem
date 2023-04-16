@@ -48,7 +48,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         output = process.stdout.decode().strip()
 
         # lets quickly create the latest installed list.
-        Functions.get_current_installed(base_dir + "/cache/installed.lst")
+        Functions.get_current_installed()
 
         # =======================================================
         #                       App Notifications

@@ -15,8 +15,13 @@
     - gwe
     - nvflash
     - nvidia
+    - nvidia-dkms
     - nvidia-lts
+    - nvidia-open
+    - nvidia-open-dkms
     - nvidia-prime
+    - nvidia-settings
+    - nvidia-utils
     - nvidia-xrun
     - nvtop
     - optimus-manager

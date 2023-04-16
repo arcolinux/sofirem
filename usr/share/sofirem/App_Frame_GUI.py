@@ -106,31 +106,16 @@ def GUI(self, Gtk, vboxStack1, category, package_file):
                         lblSep1.set_text(sep_text)
                         grid.attach(lblSep1, 0, i, 1, 1)
                         lblPkg = Gtk.Label(xalign=0, yalign=0)  # was in for loop
-                        lblPkg.set_text(packages[i])  # was in for loop
+
+                        lblPkg.set_markup(
+                            "<b>%s</b>" % packages[i].strip()
+                        )  # was in for loop
                         # hbox_pkg.pack_start(lblPkg, False, False, 100)
-                        grid.attach_next_to(
-                            lblPkg, lblSep1, Gtk.PositionType.RIGHT, 1, 1
-                        )
-                        lblSep2 = Gtk.Label(xalign=0, yalign=0)
-                        lblSep2.set_text(sep_text)
-                        grid.attach_next_to(
-                            lblSep2, lblPkg, Gtk.PositionType.RIGHT, 1, 1
-                        )
-                        lbl_pkg_desc = Gtk.Label(xalign=0, yalign=0)
-                        lbl_pkg_desc.set_text(
-                            Functions.obtain_pkg_description(packages[i])
-                        )
-                        # hbox_pkg.pack_start(lbl_pkg_desc, False, False, 0)
-                        grid.attach_next_to(
-                            lbl_pkg_desc, lblSep2, Gtk.PositionType.RIGHT, 1, 1
-                        )
-                        # grid.attach(lbl_pkg_desc, 1, i, 1, 1)
-                        lblSep3 = Gtk.Label(xalign=0, yalign=0)
-                        lblSep3.set_text(sep_text)
-                        grid.attach_next_to(
-                            lblSep3, lbl_pkg_desc, Gtk.PositionType.RIGHT, 1, 1
-                        )
+                        ###### switch widget starts ######
+
+                        # construct new switch
                         switch = Gtk.Switch()
+
                         switch.set_active(Functions.query_pkg(packages[i]))
                         switch.connect(
                             "notify::active",
@@ -142,11 +127,71 @@ def GUI(self, Gtk, vboxStack1, category, package_file):
                             category,
                             packages,
                         )
-                        # hbox_pkg.pack_end(switch, False, False, 500)
+
+                        # add switch widget to grid
+
+                        # attach_next_to(child, sibling, side, width, height)
+
                         grid.attach_next_to(
-                            switch, lblSep3, Gtk.PositionType.RIGHT, 1, 1
+                            switch, lblSep1, Gtk.PositionType.LEFT, 1, 1
                         )
-                        # grid.attach(switch, 2, i, 1, 1)
+
+                        # add space seperator next to switch
+
+                        lblSepSwitch = Gtk.Label(xalign=0, yalign=0)
+                        lblSepSwitch.set_text(sep_text)
+
+                        grid.attach_next_to(
+                            lblSepSwitch, switch, Gtk.PositionType.LEFT, 1, 1
+                        )
+
+                        ###### switch widget ends ######
+
+                        ###### pkg name label widget starts ######
+
+                        lblSepPkg1 = Gtk.Label(xalign=0, yalign=0)
+                        lblSepPkg1.set_text(sep_text)
+
+                        # add space seperator next to switch for extra padding
+
+                        grid.attach_next_to(
+                            lblSepPkg1, switch, Gtk.PositionType.RIGHT, 1, 1
+                        )
+
+                        lblSepPkg2 = Gtk.Label(xalign=0, yalign=0)
+                        lblSepPkg2.set_text(sep_text)
+
+                        # add pkg name label widget to grid
+
+                        grid.attach_next_to(
+                            lblPkg, lblSepPkg1, Gtk.PositionType.RIGHT, 1, 1
+                        )
+
+                        ###### pkg name label widget ends
+
+                        ###### pkg desc label widget starts ######
+
+                        lblSepPkgDesc = Gtk.Label(xalign=0, yalign=0)
+                        lblSepPkgDesc.set_text(sep_text)
+
+                        # add space seperator next to pkg name for extra padding
+
+                        grid.attach_next_to(
+                            lblSepPkgDesc, lblPkg, Gtk.PositionType.RIGHT, 1, 1
+                        )
+
+                        lblPkgDesc = Gtk.Label(xalign=0, yalign=0)
+                        lblPkgDesc.set_text(
+                            Functions.obtain_pkg_description(packages[i])
+                        )
+
+                        # add pkg desc label widget to grid
+
+                        grid.attach_next_to(
+                            lblPkgDesc, lblSepPkgDesc, Gtk.PositionType.RIGHT, 1, 1
+                        )
+
+                        ###### pkg desc label widget ends
 
                     # make the page scrollable
                     grid_sc = Gtk.ScrolledWindow()

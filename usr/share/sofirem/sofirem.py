@@ -51,6 +51,7 @@ class Main(Gtk.Window):
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_icon_from_file(os.path.join(base_dir, "images/sofirem.png"))
         self.set_default_size(1100, 900)
+        self.timeout_id = None
 
         print(
             "---------------------------------------------------------------------------"
@@ -82,6 +83,10 @@ class Main(Gtk.Window):
             "---------------------------------------------------------------------------"
         )
 
+        # Create installed.lst file for first time
+        Functions.get_current_installed()
+
+        # Creating directories
         if not os.path.isdir(Functions.log_dir):
             try:
                 os.mkdir(Functions.log_dir)
@@ -100,8 +105,40 @@ class Main(Gtk.Window):
             except Exception as e:
                 print(e)
 
-        # run pacman -Sy to sync pacman db, else you get a lot of 404 errors
+        # start making sure sofirem starts next time with dark or light theme
+        if os.path.isdir(Functions.home + "/.config/gtk-3.0"):
+            try:
+                if not os.path.islink("/root/.config/gtk-3.0"):
+                    Functions.shutil.rmtree("/root/.config/gtk-3.0")
+                    Functions.shutil.copytree(
+                        Functions.home + "/.config/gtk-3.0", "/root/.config/gtk-3.0"
+                    )
+            except Exception as error:
+                print(error)
 
+        if os.path.isdir(Functions.home + "/.config/gtk-4.0/"):
+            try:
+                if not os.path.islink("/root/.config/gtk-4.0"):
+                    Functions.shutil.rmtree("/root/.config/gtk-4.0/")
+                    Functions.shutil.copytree(
+                        Functions.home + "/.config/gtk-4.0/", "/root/.config/gtk-4.0/"
+                    )
+            except Exception as error:
+                print(error)
+
+        if os.path.isdir("/root/.config/xsettingsd/xsettingsd.conf"):
+            try:
+                if not os.path.islink("/root/.config/xsettingsd/"):
+                    Functions.shutil.rmtree("/root/.config/xsettingsd/")
+                    if Functions.path.isdir(Functions.home + "/.config/xsettingsd/"):
+                        Functions.shutil.copytree(
+                            Functions.home + "/.config/xsettingsd/",
+                            "/root/.config/xsettingsd/",
+                        )
+            except Exception as error:
+                print(error)
+
+        # run pacman -Sy to sync pacman db, else you get a lot of 404 errors
         if Functions.sync() == 0:
             now = datetime.now().strftime("%H:%M:%S")
             print("[INFO] %s Synchronising complete" % now)
@@ -130,24 +167,25 @@ class Main(Gtk.Window):
         sleep(2)
         splScr.destroy()
 
-        if not Functions.os.path.isdir(Functions.home + "/.config/sofirem"):
+        # why do we need this - I believe this is from ATT
+        # if not Functions.os.path.isdir(Functions.home + "/.config/sofirem"):
 
-            Functions.os.makedirs(Functions.home + "/.config/sofirem", 0o766)
-            Functions.permissions(Functions.home + "/.config/sofirem")
+        #    Functions.os.makedirs(Functions.home + "/.config/sofirem", 0o766)
+        #    Functions.permissions(Functions.home + "/.config/sofirem")
         # Force Permissions
-        a1 = Functions.os.stat(Functions.home + "/.config/autostart")
-        a2 = Functions.os.stat(Functions.home + "/.config/sofirem")
+        # a1 = Functions.os.stat(Functions.home + "/.config/autostart")
+        # a2 = Functions.os.stat(Functions.home + "/.config/sofirem")
         # a3 = Functions.os.stat(Functions.home + "/" + Functions.bd)
-        autostart = a1.st_uid
-        sof = a2.st_uid
+        # autostart = a1.st_uid
+        # sof = a2.st_uid
         # backup = a3.st_uid
 
-        if autostart == 0:
-            Functions.permissions(Functions.home + "/.config/autostart")
-            print("Fix autostart permissions...")
-        if sof == 0:
-            Functions.permissions(Functions.home + "/.config/sofirem")
-            print("Fix sofirem permissions...")
+        # if autostart == 0:
+        #    Functions.permissions(Functions.home + "/.config/autostart")
+        #    print("Fix autostart permissions...")
+        # if sof == 0:
+        #    Functions.permissions(Functions.home + "/.config/sofirem")
+        #    print("Fix sofirem permissions...")
 
         print("[INFO] %s Preparing GUI" % Functions.datetime.now().strftime("%H:%M:%S"))
 
@@ -156,6 +194,7 @@ class Main(Gtk.Window):
             "[INFO] %s Preparing GUI" % Functions.datetime.now().strftime("%H:%M:%S")
             + "\n",
         )
+
         gui = GUI.GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
 
         print("[INFO] %s Completed GUI" % Functions.datetime.now().strftime("%H:%M:%S"))
@@ -240,7 +279,9 @@ class Main(Gtk.Window):
                 th.start()
 
                 # Functions.uninstall(package)
-        Functions.get_current_installed(path)
+
+        Functions.get_current_installed()
+
         # App_Frame_GUI.GUI(self, Gtk, vboxStack1, Functions, category, package_file)
         # widget.get_parent().get_parent().get_parent().get_parent().get_parent().get_parent().get_parent().queue_redraw()
         # self.gui.hide()
@@ -253,16 +294,19 @@ class Main(Gtk.Window):
         pb.show_all()
         # pb.set_text("Updating Cache")
         # pb.reset_timer()
+
         print(
             "[INFO] %s Recache applications"
             % Functions.datetime.now().strftime("%H:%M:%S")
         )
+
         Functions.create_actions_log(
             launchtime,
             "[INFO] %s Recache applications"
             % Functions.datetime.now().strftime("%H:%M:%S")
             + "\n",
         )
+
         Functions.cache_btn("/cache/", pb)
 
 
