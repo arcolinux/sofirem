@@ -425,7 +425,7 @@ def cache(package, path_dir_cache):
                 "sardi-icons",
             ]
             if pkg in exceptions:
-                description = file_lookup(pkg, path_dir_cache + "/corrections/")
+                description = file_lookup(pkg, path_dir_cache + "corrections/")
                 return description
         return "No Description Found"
 
