@@ -35,6 +35,7 @@ base_dir = os.path.dirname(os.path.realpath(__file__))
 # =====================================================
 sudo_username = os.getlogin()
 home = "/home/" + str(sudo_username)
+path_dir_cache = base_dir + "/cache/"
 packages = []
 debug = False
 
@@ -174,8 +175,6 @@ def install(queue):
 
     try:
         if not waitForPacmanLockFile() and pkg is not None:
-            path = base_dir + "/cache/installed.lst"
-
             inst_str = ["pacman", "-S", pkg, "--needed", "--noconfirm"]
 
             now = datetime.now().strftime("%H:%M:%S")
@@ -206,7 +205,7 @@ def install(queue):
                 if out:
                     print(out.decode("utf-8"))
                 print(
-                    "---------------------------------------------------------------------------"
+                    "###########################################################################"
                 )
                 raise SystemError("Pacman failed to install package = %s" % pkg)
 
@@ -240,7 +239,6 @@ def uninstall(queue):
     try:
         if not waitForPacmanLockFile() and pkg is not None:
             if checkPackageInstalled(pkg):
-                path = base_dir + "/cache/installed.lst"
                 uninst_str = ["pacman", "-Rs", pkg, "--noconfirm"]
 
                 now = datetime.now().strftime("%H:%M:%S")
@@ -274,7 +272,7 @@ def uninstall(queue):
                     if out:
                         print(out.decode("utf-8"))
                     print(
-                        "---------------------------------------------------------------------------"
+                        "###########################################################################"
                     )
 
                     raise SystemError("Pacman failed to remove package = %s" % pkg)
@@ -360,7 +358,7 @@ def query_pkg(package):
 # =====================================================
 
 
-def cache(package, path):
+def cache(package, path_dir_cache):
     try:
         # first we need to strip the new line escape sequence to ensure we don't get incorrect outcome
         pkg = package.strip()
@@ -379,6 +377,8 @@ def cache(package, path):
 
         # validate the process result
         if process.returncode == 0:
+            if debug == True:
+                print("Return code: equals 0 " + str(process.returncode))
             # out, err = process.communicate()
 
             output = out.decode("utf-8")
@@ -392,7 +392,7 @@ def cache(package, path):
                 # and there is a remenant of it as the last character - usually a single or double quotation mark, which we also need to ignore
                 description = desc[18:]
                 # writing to a caching file with filename matching the package name
-                filename = base_dir + "/cache/" + pkg
+                filename = path_dir_cache + pkg
 
                 file = open(filename, "w")
                 file.write(description)
@@ -402,6 +402,8 @@ def cache(package, path):
         # There are several packages that do not return a valid process return code
         # Cathing those manually via corrections folder
         if process.returncode != 0:
+            if debug == True:
+                print("Return code: " + str(process.returncode))
             exceptions = [
                 "florence",
                 "mintstick-bin",
@@ -423,7 +425,7 @@ def cache(package, path):
                 "sardi-icons",
             ]
             if pkg in exceptions:
-                description = file_lookup(pkg, path + "corrections/")
+                description = file_lookup(pkg, path_dir_cache + "/corrections/")
                 return description
         return "No Description Found"
 
@@ -432,16 +434,16 @@ def cache(package, path):
 
 
 # Creating an over-load so that we can use the same function, with slightly different code to get the results we need
-def cache_btn(path, progressbar):
-    fraction = 1 / len(packages)
+def cache_btn():
+    # fraction = 1 / len(packages)
     # Non Multithreaded version.
     packages.sort()
     number = 1
     for pkg in packages:
         print(str(number) + "/" + str(len(packages)) + ": Caching " + pkg)
-        cache(pkg, base_dir + path)
+        cache(pkg, path_dir_cache)
         number = number + 1
-        progressbar.timeout_id = GLib.timeout_add(50, progressbar.update, fraction)
+        # progressbar.timeout_id = GLib.timeout_add(50, progressbar.update, fraction)
 
     print(
         "[INFO] Caching applications finished  " + datetime.now().strftime("%H:%M:%S")

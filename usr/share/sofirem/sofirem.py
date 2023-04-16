@@ -84,7 +84,13 @@ class Main(Gtk.Window):
         )
 
         # Create installed.lst file for first time
+        now = datetime.now().strftime("%H:%M:%S")
         Functions.get_current_installed()
+        print("[INFO] %s Created installed.lst" % now)
+        Functions.create_actions_log(
+            launchtime,
+            "[INFO] %s Created installed.lst" % now + "\n",
+        )
 
         # Creating directories
         if not os.path.isdir(Functions.log_dir):
@@ -239,8 +245,6 @@ class Main(Gtk.Window):
     def app_toggle(
         self, widget, active, package, Gtk, vboxStack1, Functions, category, packages
     ):
-        path = base_dir + "/cache/installed.lst"
-
         if widget.get_active():
             # Install the package
             package = package.strip()
@@ -290,24 +294,24 @@ class Main(Gtk.Window):
 
     def recache_clicked(self, widget):
         # Check if cache is out of date. If so, run the re-cache, if not, don't.
-        pb = ProgressBarWindow()
-        pb.show_all()
+        # pb = ProgressBarWindow()
+        # pb.show_all()
         # pb.set_text("Updating Cache")
         # pb.reset_timer()
 
         print(
-            "[INFO] %s Recache applications"
+            "[INFO] %s Recache applications - start"
             % Functions.datetime.now().strftime("%H:%M:%S")
         )
 
         Functions.create_actions_log(
             launchtime,
-            "[INFO] %s Recache applications"
+            "[INFO] %s Recache applications - start"
             % Functions.datetime.now().strftime("%H:%M:%S")
             + "\n",
         )
 
-        Functions.cache_btn("/cache/", pb)
+        Functions.cache_btn()
 
 
 # ====================================================================

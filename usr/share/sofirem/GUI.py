@@ -48,7 +48,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         output = process.stdout.decode().strip()
 
         # lets quickly create the latest installed list.
-        Functions.get_current_installed()
+        # Functions.get_current_installed()
 
         # =======================================================
         #                       App Notifications
@@ -88,14 +88,10 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         # ==========================================================
 
         # This section sets up the tabs, and the array for dealing with the tab content
-        conf_files_unsorted = []
         yaml_files_unsorted = []
         path = base_dir + "/yaml/"
         for file in os.listdir(path):
             if file.endswith(".yaml"):
-                # TODO: Add a function or series of steps to compare file dates
-                # against an online location, for e.g. github or website, and update
-                # if need be.
                 yaml_files_unsorted.append(file)
             else:
                 print(
@@ -195,8 +191,6 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         # hbox1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
         # hbox2 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
         # hbox3 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
-
-        # hbox3.pack_start(btnReCache, False, False, 0)
 
         ivbox.pack_start(image, False, False, 0)
         ivbox.pack_start(stack_switcher, True, True, 0)
