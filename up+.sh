@@ -33,9 +33,12 @@
 # checking if I have the latest files from github
 echo "Checking for newer files online first"
 git pull
-
-sudo rm -r /home/erik/ARCO/ARCOLINUX/sofirem/usr/share/sofirem/__pycache__/
-sudo rm /home/erik/ARCO/ARCOLINUX/sofirem/usr/share/sofirem/cache/installed.lst
+if [ -d /home/erik/ARCO/ARCOLINUX/sofirem/usr/share/sofirem/__pycache__/ ]; then
+	sudo rm -r /home/erik/ARCO/ARCOLINUX/sofirem/usr/share/sofirem/__pycache__/
+fi
+if [ -f /home/erik/ARCO/ARCOLINUX/sofirem/usr/share/sofirem/cache/installed.lst ]; then
+	sudo rm /home/erik/ARCO/ARCOLINUX/sofirem/usr/share/sofirem/cache/installed.lst
+fi
 
 # Below command will backup everything inside the project folder
 git add --all .
