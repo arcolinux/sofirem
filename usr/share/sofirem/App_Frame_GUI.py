@@ -5,9 +5,10 @@ from socket import TIPC_ADDR_NAME
 from urllib.parse import scheme_chars
 import Functions
 
+
 def GUI(self, Gtk, vboxStack1, category, packages_lst):
     try:
-         # Lets set some variables that we know we will need later
+        # Lets set some variables that we know we will need later
         # hboxes and items to make the page look sensible
         cat_name = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         seperator = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
@@ -48,7 +49,7 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
         # index for the grid
         index = 0
 
-        '''        
+        """
             Store  a list of unique sub-categories
             e.g.
 
@@ -56,7 +57,7 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
             sub category    --> Accessories
             sub category    --> Conky
 
-        '''
+        """
 
         sub_catlabels = []
         page_descs = []
@@ -70,17 +71,13 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
         # each Stack has an associated subcategory
 
         for subcat in subcats.keys():
-            vboxStacks.append(
-                Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-            )
+            vboxStacks.append(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0))
             # for the sub-cat page title
-            sub_catlabels.append(
-                Gtk.Label(xalign=0)
-            )
+            sub_catlabels.append(Gtk.Label(xalign=0))
 
             vboxStackNames.append(subcat)
             # iterate across a list of packages
-            
+
             for package in packages_lst:
                 if package.subcategory == subcat:
                     page = vboxStacks.pop()
@@ -88,9 +85,13 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
                     if len(sub_catlabels) > 0:
                         lblTitle = sub_catlabels.pop()
                         lblDesc = Gtk.Label(xalign=0)
-                        lblDesc.set_markup("Description: <i>" + package.subcategory_description + "</i>")
+                        lblDesc.set_markup(
+                            "Description: <i>"
+                            + package.subcategory_description
+                            + "</i>"
+                        )
                         lblTitle.set_markup("<b>" + package.subcategory + "</b>")
-                    
+
                         page.pack_start(lblTitle, False, False, 0)
                         page.pack_start(lblDesc, False, False, 0)
 
@@ -103,9 +104,7 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
                     grid.attach(lblSep1, 0, index, 1, 1)
                     lblPkg = Gtk.Label(xalign=0, yalign=0)  # was in for loop
 
-                    lblPkg.set_markup(
-                        "<b>%s</b>" % package.name
-                    )
+                    lblPkg.set_markup("<b>%s</b>" % package.name)
 
                     ###### switch widget starts ######
 
@@ -127,9 +126,7 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
 
                     # attach_next_to(child, sibling, side, width, height)
 
-                    grid.attach_next_to(
-                        switch, lblSep1, Gtk.PositionType.LEFT, 1, 1
-                    )
+                    grid.attach_next_to(switch, lblSep1, Gtk.PositionType.LEFT, 1, 1)
 
                     # add space seperator next to switch
 
@@ -176,9 +173,7 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
                     )
 
                     lblPkgDesc = Gtk.Label(xalign=0, yalign=0)
-                    lblPkgDesc.set_text(
-                        package.description
-                    )
+                    lblPkgDesc.set_text(package.description)
 
                     # add pkg desc label widget to grid
 
@@ -194,57 +189,54 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
 
                     grid_sc.set_propagate_natural_height(True)
                     # pack the grid to the page.
-                    
+
                     page.pack_start(grid_sc, True, True, 0)
                     # save the page - put it back (now populated)
 
-                    '''
+                    """
                         UI note.
                         To remove the extra padding around the switch buttons
                         Comment out the references to grid_sc
                         Then just have page.pack_start(grid,True, True, 0)
-                    ''' 
+                    """
                     vboxStacks.append(page)
-                    
+
                     # reset the things that we need to.
-                    #packages.clear()
+                    # packages.clear()
                     grid = Gtk.Grid()
 
                     index += 1
 
         # Now we pack the stack
         item_num = 0
-    
+
         for item in vboxStacks:
             stack.add_titled(
-                    item,
-                    "stack" + str(item_num), 
-                    vboxStackNames[item_num],
+                item,
+                "stack" + str(item_num),
+                vboxStackNames[item_num],
             )
             item_num += 1
-                
+
         # Place the stack switcher and the stack together into a vbox
         vbox.pack_start(scrolledSwitch, False, False, 0)
-        
 
         scrolledWindow = Gtk.ScrolledWindow()
         scrolledWindow.set_propagate_natural_height(True)
         scrolledWindow.add(stack)
-        vbox.pack_start(scrolledWindow,True,True,0)
-        
+        vbox.pack_start(scrolledWindow, True, True, 0)
 
         # Stuff the vbox with the title and seperator to create the page
         vboxStack1.pack_start(cat_name, False, False, 0)
         vboxStack1.pack_start(seperator, False, False, 0)
         vboxStack1.pack_start(vbox, False, False, 0)
 
-        
     except Exception as e:
         print("Exception in App_Frame_GUI.GUI(): %s" % e)
 
 
 ########## PREVIOUS GUI CODE START ##########
-'''
+"""
 def GUI(self, Gtk, vboxStack1, category, package_file):
     try:
         # Lets set some variables that we know we will need later
@@ -474,4 +466,4 @@ def GUI(self, Gtk, vboxStack1, category, package_file):
         print("Exception in App_Frame_GUI.GUI(): %s" % e)
 
 ########## PREVIOUS GUI CODE END ##########
-'''
+"""

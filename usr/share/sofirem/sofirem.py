@@ -129,23 +129,6 @@ class Main(Gtk.Window):
                 except Exception as error:
                     print(error)
 
-            # TODO: for a later date
-            # if os.path.isdir(Functions.home + "/.config/gtk-4.0/"):
-
-            #     # if you find a link remove it
-            #     if os.path.islink("/root/.config/gtk-4.0"):
-            #         try:
-            #             os.unlink("/root/.config/gtk-4.0")
-            #         except Exception as error:
-            #             print(error)
-
-            #     try:
-            #         Functions.shutil.copytree(
-            #             Functions.home + "/.config/gtk-4.0/", "/root/.config/gtk-4.0/"
-            #         )
-            #     except Exception as error:
-            #         print(error)
-
             if os.path.isdir("/root/.config/xsettingsd/xsettingsd.conf"):
                 try:
                     if not os.path.islink("/root/.config/xsettingsd/"):
@@ -229,26 +212,6 @@ class Main(Gtk.Window):
 
             sleep(2)
             splScr.destroy()
-
-            # why do we need this - I believe this is from ATT
-            # if not Functions.os.path.isdir(Functions.home + "/.config/sofirem"):
-
-            #    Functions.os.makedirs(Functions.home + "/.config/sofirem", 0o766)
-            #    Functions.permissions(Functions.home + "/.config/sofirem")
-            # Force Permissions
-            # a1 = Functions.os.stat(Functions.home + "/.config/autostart")
-            # a2 = Functions.os.stat(Functions.home + "/.config/sofirem")
-            # a3 = Functions.os.stat(Functions.home + "/" + Functions.bd)
-            # autostart = a1.st_uid
-            # sof = a2.st_uid
-            # backup = a3.st_uid
-
-            # if autostart == 0:
-            #    Functions.permissions(Functions.home + "/.config/autostart")
-            #    print("Fix autostart permissions...")
-            # if sof == 0:
-            #    Functions.permissions(Functions.home + "/.config/sofirem")
-            #    print("Fix sofirem permissions...")
 
             print(
                 "[INFO] %s Preparing GUI"
@@ -487,6 +450,8 @@ class Main(Gtk.Window):
                 th.start()
 
                 # Functions.uninstall(package)
+
+        Functions.get_current_installed()
 
         # App_Frame_GUI.GUI(self, Gtk, vboxStack1, Functions, category, package_file)
         # widget.get_parent().get_parent().get_parent().get_parent().get_parent().get_parent().get_parent().queue_redraw()

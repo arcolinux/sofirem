@@ -154,11 +154,11 @@ def sync():
             print("[ERROR] Sync failed")
 
             msg_dialog = Functions.message_dialog(
-                            self,
-                            "pacman -Sy",
-                            "Pacman database synchronisation failed",
-                            "Pacman lock file found inside %s" % pacman_lock_file,
-                            Gtk.MessageType.ERROR,
+                self,
+                "pacman -Sy",
+                "Pacman database synchronisation failed",
+                "Pacman lock file found inside %s" % pacman_lock_file,
+                Gtk.MessageType.ERROR,
             )
 
             msg_dialog.run()
@@ -182,16 +182,18 @@ def sync():
 # =====================================================
 #               APP INSTALLATION
 # =====================================================
-def install(self,pkg_queue,signal,switch):
+def install(self, pkg_queue, signal, switch):
 
     pkg = pkg_queue.get()
-    install_state={}
+    install_state = {}
     install_state[pkg] = None
 
     try:
-        if waitForPacmanLockFile() == False and \
-            checkPackageInstalled(pkg) == False and \
-            signal == "install":
+        if (
+            waitForPacmanLockFile() == False
+            and checkPackageInstalled(pkg) == False
+            and signal == "install"
+        ):
 
             path = base_dir + "/cache/installed.lst"
 
@@ -217,26 +219,26 @@ def install(self,pkg_queue,signal,switch):
                 install_state[pkg] = "INSTALLED"
 
                 print(
-                    "[INFO] %s Package install : %s status = completed" %
-                        (datetime.now().strftime("%H:%M:%S"),pkg)
+                    "[INFO] %s Package install : %s status = completed"
+                    % (datetime.now().strftime("%H:%M:%S"), pkg)
                 )
                 print(
                     "---------------------------------------------------------------------------"
                 )
 
                 GLib.idle_add(
-                    show_in_app_notification, 
+                    show_in_app_notification,
                     self,
                     "Package: %s installed" % pkg,
                 )
-
 
             else:
                 # deactivate switch widget, install failed
                 switch.set_active(False)
                 get_current_installed()
-                print("[ERROR] %s Package install : %s status = failed" %
-                        (datetime.now().strftime("%H:%M:%S"),pkg)
+                print(
+                    "[ERROR] %s Package install : %s status = failed"
+                    % (datetime.now().strftime("%H:%M:%S"), pkg)
                 )
                 if out:
                     out = out.decode("utf-8")
@@ -247,18 +249,18 @@ def install(self,pkg_queue,signal,switch):
                 )
 
                 GLib.idle_add(
-                    show_in_app_notification, 
+                    show_in_app_notification,
                     self,
                     "[ERROR] Failed to install package: %s" % pkg,
                 )
 
                 raise SystemError("Pacman failed to install package = %s" % pkg)
 
-
-        elif(checkPackageInstalled(pkg)):
+        elif checkPackageInstalled(pkg):
             install_state[pkg] = "INSTALLED"
-            print("[INFO] %s Package %s is already installed" %
-                    (datetime.now().strftime("%H:%M:%S"),pkg)
+            print(
+                "[INFO] %s Package %s is already installed"
+                % (datetime.now().strftime("%H:%M:%S"), pkg)
             )
 
     except SystemError as s:
@@ -266,13 +268,12 @@ def install(self,pkg_queue,signal,switch):
     except Exception as e:
         print("Exception in install(): %s" % e)
     finally:
-        '''
-            Now check install_state for any packages which failed to install
-        '''
-            # display dependencies notification to user here
+        """
+        Now check install_state for any packages which failed to install
+        """
+        # display dependencies notification to user here
 
-
-        #print("error" in install_state[pkg].splitlines())
+        # print("error" in install_state[pkg].splitlines())
         if install_state[pkg] != "INSTALLED":
             msg_dialog = message_dialog(
                 self,
@@ -283,7 +284,6 @@ def install(self,pkg_queue,signal,switch):
             )
             msg_dialog.run()
             msg_dialog.hide()
-            
 
         if install_state[pkg] == "INSTALLED":
             switch.set_active(True)
@@ -293,84 +293,86 @@ def install(self,pkg_queue,signal,switch):
         pkg_queue.task_done()
 
 
-
 # =====================================================
 #               APP UNINSTALLATION
 # =====================================================
-def uninstall(self,pkg_queue,signal,switch):
+def uninstall(self, pkg_queue, signal, switch):
 
     pkg = pkg_queue.get()
-    uninstall_state={}
+    uninstall_state = {}
     uninstall_state[pkg] = None
 
     try:
-        if waitForPacmanLockFile() == False and \
-            checkPackageInstalled(pkg) and \
-            signal == "uninstall":
+        if (
+            waitForPacmanLockFile() == False
+            and checkPackageInstalled(pkg)
+            and signal == "uninstall"
+        ):
 
-                path = base_dir + "/cache/installed.lst"
-                uninst_str = ["pacman", "-Rs", pkg, "--noconfirm"]
+            path = base_dir + "/cache/installed.lst"
+            uninst_str = ["pacman", "-Rs", pkg, "--noconfirm"]
 
-                now = datetime.now().strftime("%H:%M:%S")
-                print("[INFO] %s Removing package : %s" % (now, pkg))
-                create_actions_log(
-                    launchtime, "[INFO] " + now + " Removing package " + pkg + "\n"
+            now = datetime.now().strftime("%H:%M:%S")
+            print("[INFO] %s Removing package : %s" % (now, pkg))
+            create_actions_log(
+                launchtime, "[INFO] " + now + " Removing package " + pkg + "\n"
+            )
+
+            process_pkg_rem = subprocess.Popen(
+                uninst_str,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+
+            out, err = process_pkg_rem.communicate(timeout=60)
+
+            if process_pkg_rem.returncode == 0:
+                get_current_installed()
+                uninstall_state[pkg] = "REMOVED"
+                print(
+                    "[INFO] %s Package removal : %s status = completed"
+                    % (datetime.now().strftime("%H:%M:%S"), pkg)
+                )
+                print(
+                    "---------------------------------------------------------------------------"
                 )
 
-                process_pkg_rem = subprocess.Popen(
-                    uninst_str,
-                    shell=False,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
+                GLib.idle_add(
+                    show_in_app_notification,
+                    self,
+                    "Package: %s removed" % pkg,
                 )
 
-                out, err = process_pkg_rem.communicate(timeout=60)
+            else:
+                # reactivate switch widget, the package has not been removed
+                switch.set_active(True)
+                get_current_installed()
+                print(
+                    "[ERROR] %s Package removal : %s status = failed"
+                    % (datetime.now().strftime("%H:%M:%S"), pkg)
+                )
+                if out:
+                    out = out.decode("utf-8")
+                    uninstall_state[pkg] = out.splitlines()
+                    print(out)
+                print(
+                    "---------------------------------------------------------------------------"
+                )
 
-                if process_pkg_rem.returncode == 0:
-                    get_current_installed()
-                    uninstall_state[pkg] = "REMOVED"
-                    print(
-                        "[INFO] %s Package removal : %s status = completed" %
-                            (datetime.now().strftime("%H:%M:%S"),pkg)
-                        )
-                    print(
-                        "---------------------------------------------------------------------------"
-                    )
-
-                    GLib.idle_add(
-                        show_in_app_notification, 
-                        self,
-                        "Package: %s removed" % pkg,
-                    )
-
-                else:
-                    # reactivate switch widget, the package has not been removed
-                    switch.set_active(True)
-                    get_current_installed()
-                    print(
-                        "[ERROR] %s Package removal : %s status = failed" %
-                            (datetime.now().strftime("%H:%M:%S"),pkg)
-                    )
-                    if out:
-                        out = out.decode("utf-8")
-                        uninstall_state[pkg] = out.splitlines()
-                        print(out)
-                    print(
-                        "---------------------------------------------------------------------------"
-                    )
-
-                    GLib.idle_add(
-                    show_in_app_notification, 
+                GLib.idle_add(
+                    show_in_app_notification,
                     self,
                     "[ERROR] Failed to remove package: %s" % pkg,
                 )
 
-                    raise SystemError("Pacman failed to remove package = %s" % pkg)
+                raise SystemError("Pacman failed to remove package = %s" % pkg)
 
-        elif(checkPackageInstalled(pkg) == False):
+        elif checkPackageInstalled(pkg) == False:
             uninstall_state[pkg] = "REMOVED"
-            print("[INFO] %s Package %s is already uninstalled" %
-                    (datetime.now().strftime("%H:%M:%S"),pkg)
+            print(
+                "[INFO] %s Package %s is already uninstalled"
+                % (datetime.now().strftime("%H:%M:%S"), pkg)
             )
 
     except SystemError as s:
@@ -380,10 +382,10 @@ def uninstall(self,pkg_queue,signal,switch):
         print("Exception in uninstall(): %s" % e)
 
     finally:
-        '''
-            Now check uninstall_state for any packages which failed to uninstall
-        '''
-            # display dependencies notification to user here
+        """
+        Now check uninstall_state for any packages which failed to uninstall
+        """
+        # display dependencies notification to user here
 
         if uninstall_state[pkg] != "REMOVED":
 
@@ -398,14 +400,13 @@ def uninstall(self,pkg_queue,signal,switch):
             msg_dialog.run()
             msg_dialog.hide()
 
-
-
         if uninstall_state[pkg] == "REMOVED":
             switch.set_active(False)
         else:
             switch.set_active(True)
 
         pkg_queue.task_done()
+
 
 # =====================================================
 #               SEARCH INDEXING
@@ -436,7 +437,7 @@ def storePackages():
 
                 # read contents of each yaml file
 
-                with open(path+yaml_file, "r") as yaml:
+                with open(path + yaml_file, "r") as yaml:
                     content = yaml.readlines()
                 for line in content:
                     if line.startswith("  packages:"):
@@ -444,11 +445,21 @@ def storePackages():
                     elif line.startswith("  description: "):
                         # Set the label text for the description line
                         subcat_desc = (
-                            line.strip("  description: ").strip().strip('"').strip("\n").strip()
+                            line.strip("  description: ")
+                            .strip()
+                            .strip('"')
+                            .strip("\n")
+                            .strip()
                         )
                     elif line.startswith("- name:"):
                         # category
-                        subcat_name = line.strip("- name: ").strip().strip('"').strip("\n").strip()
+                        subcat_name = (
+                            line.strip("- name: ")
+                            .strip()
+                            .strip('"')
+                            .strip("\n")
+                            .strip()
+                        )
                     elif line.startswith("    - "):
                         # add the package to the packages list
 
@@ -457,15 +468,14 @@ def storePackages():
                         package_desc = obtain_pkg_description(package_name)
 
                         package = Package(
-                                package_name,
-                                package_desc,
-                                category_name,
-                                subcat_name,
-                                subcat_desc,
+                            package_name,
+                            package_desc,
+                            category_name,
+                            subcat_name,
+                            subcat_desc,
                         )
 
                         packages.append(package)
-                
 
         # filter the results so that each category holds a list of package
 
@@ -488,7 +498,7 @@ def storePackages():
 
             category_name = pkg.category
 
-        '''
+        """
         for key in category_dict.keys():
             print("Category = %s" % key)
             pkg_list = category_dict[key]
@@ -497,19 +507,17 @@ def storePackages():
                 print(pkg.name)
                 #print(pkg.category)
 
-            
+
             print("++++++++++++++++++++++++++++++")
-        '''
+        """
 
         sorted_dict = None
 
         sorted_dict = dict(sorted(category_dict.items()))
 
-
         return sorted_dict
     except Exception as e:
         print("Exception in storePackages() : %s" % e)
-
 
 
 # =====================================================
@@ -530,11 +538,10 @@ def message_dialog(self, title, first_msg, secondary_msg, msg_type):
     msg_dialog.set_title(title)
 
     if len(secondary_msg) > 0:
-        msg_dialog.format_secondary_markup(
-            "<b> %s </b> " % secondary_msg
-        )
+        msg_dialog.format_secondary_markup("<b> %s </b> " % secondary_msg)
 
     return msg_dialog
+
 
 # =====================================================
 #               APP QUERY
@@ -548,8 +555,8 @@ def get_current_installed():
     # run the query - using Popen because it actually suits this use case a bit better.
 
     subprocess_query = subprocess.Popen(
-        query_str, 
-        shell=False, 
+        query_str,
+        shell=False,
         stdout=subprocess.PIPE,
     )
 
@@ -804,22 +811,24 @@ def waitForPacmanLockFile():
 
     while True:
         if os.path.exists("/var/lib/pacman/db.lck"):
-            print("[INFO] %s Waiting for previous Pacman transaction to complete" %
-                    datetime.now().strftime("%H:%M:%S")
+            print(
+                "[INFO] %s Waiting for previous Pacman transaction to complete"
+                % datetime.now().strftime("%H:%M:%S")
             )
 
             time.sleep(5)
 
             elapsed = int(time.time()) + 5
 
-            print("[INFO] %s Elapsed duration : %s" %
-                    (datetime.now().strftime("%H:%M:%S"),(elapsed - start))
-                )
-
+            print(
+                "[INFO] %s Elapsed duration : %s"
+                % (datetime.now().strftime("%H:%M:%S"), (elapsed - start))
+            )
 
             if (elapsed - start) >= timeout:
-                print("[WARN] %s Waiting for previous Pacman transaction timed out after %ss" %
-                    (datetime.now().strftime("%H:%M:%S"),timeout)
+                print(
+                    "[WARN] %s Waiting for previous Pacman transaction timed out after %ss"
+                    % (datetime.now().strftime("%H:%M:%S"), timeout)
                 )
                 break
         else:
@@ -877,7 +886,9 @@ def messageBox(self, title, message):
 
 def search(self, term):
     try:
-        print("[INFO] %s Searching for: \"%s\"" % (
+        print(
+            '[INFO] %s Searching for: "%s"'
+            % (
                 datetime.now().strftime("%H:%M:%S"),
                 term,
             )
@@ -896,23 +907,21 @@ def search(self, term):
             for pkg in pkg_list:
                 if whitespace:
                     for te in term.split(" "):
-                        if te in pkg.name \
-                            or te in pkg.description:
+                        if te in pkg.name or te in pkg.description:
                             # only unique name matches
                             if pkg not in pkg_matches:
                                 pkg_matches.append(
                                     pkg,
                                 )
-                else:    
-                    if term in pkg.name \
-                        or term in pkg.description:
-                            pkg_matches.append(
-                                pkg,
-                            )
-        '''
+                else:
+                    if term in pkg.name or term in pkg.description:
+                        pkg_matches.append(
+                            pkg,
+                        )
+        """
         for p in pkg_matches:
             print(p.name)
-        '''
+        """
 
         # filter the results so that each category holds a list of package
 
@@ -940,7 +949,7 @@ def search(self, term):
             msg_dialog = message_dialog(
                 self,
                 "Find Package",
-                "\"%s\" was not found in the available sources" % term,
+                '"%s" was not found in the available sources' % term,
                 "Please try another search query",
                 Gtk.MessageType.ERROR,
             )
@@ -949,7 +958,7 @@ def search(self, term):
             msg_dialog.hide()
 
         # debug console output to display package info
-        '''
+        """
         # print out number of results found from each category
         print("[DEBUG] %s Search results.." % datetime.now().strftime("%H:%M:%S"))
 
@@ -961,7 +970,7 @@ def search(self, term):
                         category_res_len,
                     )
             )
-        '''
+        """
 
         # sort dictionary so the category names are displayed in alphabetical order
         sorted_dict = None
@@ -977,9 +986,11 @@ def search(self, term):
     except Exception as e:
         print("Exception in search(): %s", e)
 
+
 # =====================================================
 #               NOTIFICATIONS
 # =====================================================
+
 
 def show_in_app_notification(self, message):
     if self.timeout_id is not None:
@@ -1001,5 +1012,6 @@ def close_in_app_notification(self):
     self.notification_revealer.set_reveal_child(False)
     GLib.source_remove(self.timeout_id)
     self.timeout_id = None
+
 
 #######ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!
