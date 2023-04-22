@@ -56,7 +56,7 @@ class Main(Gtk.Window):
             self.set_position(Gtk.WindowPosition.CENTER)
             self.set_icon_from_file(os.path.join(base_dir, "images/sofirem.png"))
             self.set_default_size(1100, 900)
-    	    # ctrl+f give focus to search entry
+            # ctrl+f give focus to search entry
             self.connect("key-press-event", self.on_keypress_event)
             self.timeout_id = None
 
@@ -67,7 +67,7 @@ class Main(Gtk.Window):
             print(
                 "---------------------------------------------------------------------------"
             )
-            print("You can receive support on https://discord.gg/R2amEEz")
+            print("You can receive support on https://discord.gg/stBhS4taje")
             print(
                 "---------------------------------------------------------------------------"
             )
@@ -150,7 +150,9 @@ class Main(Gtk.Window):
                 try:
                     if not os.path.islink("/root/.config/xsettingsd/"):
                         Functions.shutil.rmtree("/root/.config/xsettingsd/")
-                        if Functions.path.isdir(Functions.home + "/.config/xsettingsd/"):
+                        if Functions.path.isdir(
+                            Functions.home + "/.config/xsettingsd/"
+                        ):
                             Functions.shutil.copytree(
                                 Functions.home + "/.config/xsettingsd/",
                                 "/root/.config/xsettingsd/",
@@ -159,7 +161,7 @@ class Main(Gtk.Window):
                     print(error)
 
             # run pacman -Sy to sync pacman db, else you get a lot of 404 errors
-            
+
             if Functions.sync() == 0:
                 now = datetime.now().strftime("%H:%M:%S")
                 print("[INFO] %s Synchronising complete" % now)
@@ -182,26 +184,24 @@ class Main(Gtk.Window):
                 )
 
                 msg_dialog = Functions.message_dialog(
-                                self,
-                                "pacman -Sy",
-                                "Pacman database synchronisation failed",
-                                "Please verify the pacman logs for more details",
-                                Gtk.MessageType.ERROR,
-                            )
+                    self,
+                    "pacman -Sy",
+                    "Pacman database synchronisation failed",
+                    "Please verify the pacman logs for more details",
+                    Gtk.MessageType.ERROR,
+                )
 
                 msg_dialog.run()
                 msg_dialog.hide()
-            
 
             # store package information into memory, and use the dictionary returned to search in for quicker retrieval
-            print(
-                "[INFO] %s Storing package metadata started" % now
-            )
+            print("[INFO] %s Storing package metadata started" % now)
 
             self.packages = Functions.storePackages()
 
             print(
-                "[INFO] %s Categories = %s" % (
+                "[INFO] %s Categories = %s"
+                % (
                     now,
                     len(self.packages.keys()),
                 )
@@ -213,16 +213,14 @@ class Main(Gtk.Window):
                 total_packages += len(self.packages[category])
 
             print(
-                "[INFO] %s Total packages = %s" % (
+                "[INFO] %s Total packages = %s"
+                % (
                     now,
                     total_packages,
                 )
             )
 
-
-            print(
-                "[INFO] %s Storing package metadata completed" % now
-            )
+            print("[INFO] %s Storing package metadata completed" % now)
 
             splScr = Splash.splashScreen()
 
@@ -252,11 +250,15 @@ class Main(Gtk.Window):
             #    Functions.permissions(Functions.home + "/.config/sofirem")
             #    print("Fix sofirem permissions...")
 
-            print("[INFO] %s Preparing GUI" % Functions.datetime.now().strftime("%H:%M:%S"))
+            print(
+                "[INFO] %s Preparing GUI"
+                % Functions.datetime.now().strftime("%H:%M:%S")
+            )
 
             Functions.create_actions_log(
                 launchtime,
-                "[INFO] %s Preparing GUI" % Functions.datetime.now().strftime("%H:%M:%S")
+                "[INFO] %s Preparing GUI"
+                % Functions.datetime.now().strftime("%H:%M:%S")
                 + "\n",
             )
 
@@ -267,11 +269,15 @@ class Main(Gtk.Window):
             # Save reference to the vbox generated from the main GUI view
             self.vbox_main = GUI.GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
 
-            print("[INFO] %s Completed GUI" % Functions.datetime.now().strftime("%H:%M:%S"))
+            print(
+                "[INFO] %s Completed GUI"
+                % Functions.datetime.now().strftime("%H:%M:%S")
+            )
 
             Functions.create_actions_log(
                 launchtime,
-                "[INFO] %s Completed GUI" % Functions.datetime.now().strftime("%H:%M:%S")
+                "[INFO] %s Completed GUI"
+                % Functions.datetime.now().strftime("%H:%M:%S")
                 + "\n",
             )
 
@@ -287,26 +293,23 @@ class Main(Gtk.Window):
     # =====================================================
 
     # sets focus on the search entry
-    def on_keypress_event(self,widget,event):
-        shortcut = Gtk.accelerator_get_label(event.keyval,event.state)
+    def on_keypress_event(self, widget, event):
+        shortcut = Gtk.accelerator_get_label(event.keyval, event.state)
 
         if shortcut in ("Ctrl+F", "Ctrl+Mod2+F"):
             # set focus on text entry, select all text if any
             self.searchEntry.grab_focus()
 
-
     # =====================================================
     #               SEARCH ENTRY
     # =====================================================
 
-    def on_search_activated(self,searchentry):
-        
-        if searchentry.get_text_length() == 0 \
-            and self.search_activated:
+    def on_search_activated(self, searchentry):
+
+        if searchentry.get_text_length() == 0 and self.search_activated:
             self.vbox_main = GUI.GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
             self.search_activated = False
-        
-        
+
         if searchentry.get_text_length() == 0:
             self.search_activated = False
 
@@ -324,22 +327,25 @@ class Main(Gtk.Window):
                     th_search = Functions.threading.Thread(
                         name="thread_search",
                         target=Functions.search,
-                        args=(self,
+                        args=(
+                            self,
                             search_term,
                         ),
                     )
-                    print("[INFO] %s Starting search"
-                            % Functions.datetime.now().strftime("%H:%M:%S")
+                    print(
+                        "[INFO] %s Starting search"
+                        % Functions.datetime.now().strftime("%H:%M:%S")
                     )
 
                     th_search.start()
-                                    
+
                     # get the search_results from the queue
                     results = self.search_queue.get()
 
                     if results is not None:
-                        print("[INFO] %s Search complete"
-                                % Functions.datetime.now().strftime("%H:%M:%S")
+                        print(
+                            "[INFO] %s Search complete"
+                            % Functions.datetime.now().strftime("%H:%M:%S")
                         )
 
                         if len(results) > 0:
@@ -347,37 +353,42 @@ class Main(Gtk.Window):
                             for val in results.values():
                                 total += len(val)
 
-                            print("[INFO] %s Search found %s results"
-                                    % (Functions.datetime.now().strftime("%H:%M:%S"),
-                                        total,
-                                    )
+                            print(
+                                "[INFO] %s Search found %s results"
+                                % (
+                                    Functions.datetime.now().strftime("%H:%M:%S"),
+                                    total,
+                                )
                             )
                             # make sure the gui search only displays the pkgs inside the results
 
-                            self.vbox_search = \
-                                GUI.GUISearch(
-                                    self,
-                                    Gtk,
-                                    Gdk,
-                                    GdkPixbuf,
-                                    base_dir,
-                                    os,
-                                    Pango,
-                                    results,
-                                    search_term,
+                            self.vbox_search = GUI.GUISearch(
+                                self,
+                                Gtk,
+                                Gdk,
+                                GdkPixbuf,
+                                base_dir,
+                                os,
+                                Pango,
+                                results,
+                                search_term,
                             )
 
                             self.search_activated = True
                     else:
-                        print("[INFO] %s Search found %s results"
-                                    % (Functions.datetime.now().strftime("%H:%M:%S"),
-                                        0,
-                                    )
+                        print(
+                            "[INFO] %s Search found %s results"
+                            % (
+                                Functions.datetime.now().strftime("%H:%M:%S"),
+                                0,
+                            )
                         )
                         self.searchEntry.grab_focus()
 
                 elif self.search_activated == True:
-                    self.vbox_main = GUI.GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
+                    self.vbox_main = GUI.GUI(
+                        self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango
+                    )
                     self.search_activated = False
             except Exception as err:
                 print("Exception in on_search_activated(): %s" % err)
@@ -386,14 +397,13 @@ class Main(Gtk.Window):
                 if self.search_activated == True:
                     self.search_queue.task_done()
 
-    def on_search_cleared(self,searchentry,icon_pos,event):
+    def on_search_cleared(self, searchentry, icon_pos, event):
         if self.search_activated:
             self.vbox_main = GUI.GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
 
         self.searchEntry.set_placeholder_text("Search...")
 
         self.search_activated = False
-
 
     # =====================================================
     #               RESTART/QUIT BUTTON
@@ -422,16 +432,15 @@ class Main(Gtk.Window):
     # ====================================================================
     # Given what this function does, it might be worth considering making it a
     # thread so that the app doesn't block while installing/uninstalling is happening.
-    def app_toggle(
-        self, widget, active, package, Gtk, vboxStack1, Functions, category
-    ):
+    def app_toggle(self, widget, active, package, Gtk, vboxStack1, Functions, category):
         if widget.get_active():
             # Install the package
             package = package.strip()
 
             if len(package) > 0:
-                print("[INFO] %s Package to install : %s" %
-                    (datetime.now().strftime("%H:%M:%S"),package)
+                print(
+                    "[INFO] %s Package to install : %s"
+                    % (datetime.now().strftime("%H:%M:%S"), package)
                 )
 
                 self.pkg_queue.put(package)
@@ -439,7 +448,12 @@ class Main(Gtk.Window):
                 th = Functions.threading.Thread(
                     name="thread_pkginst",
                     target=Functions.install,
-                    args=(self,self.pkg_queue,"install",widget,),
+                    args=(
+                        self,
+                        self.pkg_queue,
+                        "install",
+                        widget,
+                    ),
                 )
 
                 th.daemon = True
@@ -451,8 +465,9 @@ class Main(Gtk.Window):
             package = package.strip()
 
             if len(package) > 0:
-                print("[INFO] %s Package to remove : %s"  %
-                    (datetime.now().strftime("%H:%M:%S"),package)
+                print(
+                    "[INFO] %s Package to remove : %s"
+                    % (datetime.now().strftime("%H:%M:%S"), package)
                 )
 
                 self.pkg_queue.put(package)
@@ -460,7 +475,12 @@ class Main(Gtk.Window):
                 th = Functions.threading.Thread(
                     name="thread_pkgrem",
                     target=Functions.uninstall,
-                    args=(self,self.pkg_queue,"uninstall",widget,),
+                    args=(
+                        self,
+                        self.pkg_queue,
+                        "uninstall",
+                        widget,
+                    ),
                 )
 
                 th.daemon = True
