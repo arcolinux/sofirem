@@ -220,7 +220,7 @@ def GUISearch(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, se
         ivbox.pack_start(ivSearchbox, False, False, 0)
         ivbox.pack_start(stack_switcher, True, True, 0)
 
-        ivbox.pack_start(btnReCache, False, False, 0)
+        #ivbox.pack_start(btnReCache, False, False, 0)
         ivbox.pack_start(btnQuitSofi, False, False, 0)
 
         vbox1.pack_start(hbox0, False, False, 0)
