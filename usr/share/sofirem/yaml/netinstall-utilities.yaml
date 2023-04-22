@@ -27,7 +27,6 @@
     - btop
     - btrbk
     - caffeine
-    - caffeine-ng
     - catfish
     - ckb-next-git
     - cpu-x
@@ -130,7 +129,6 @@
     - wireshark-qt
     - workrave
     - wttr
-    - xlunch-git
     - yay
     - yay-bin
     - yay-git
