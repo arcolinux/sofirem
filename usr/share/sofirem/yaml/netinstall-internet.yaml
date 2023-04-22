@@ -64,7 +64,7 @@
   packages:
     - evolution
     - geary
-    - mailspring    
+    - mailspring
     - thunderbird
 - name: "Vpn Software"
   description: "Vpn Software"
