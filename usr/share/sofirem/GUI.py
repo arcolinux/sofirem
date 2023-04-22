@@ -30,11 +30,11 @@ class GUI_Worker(Thread):
 
                 # make sure we have the required number of items on the queue
                 if len(items) == 5:
-                    #self, Gtk, vboxStack1, category, package_file = items
+                    # self, Gtk, vboxStack1, category, package_file = items
                     self, Gtk, vboxStack1, category, packages = items
                     App_Frame_GUI.GUI(
-                        self, 
-                        Gtk, 
+                        self,
+                        Gtk,
                         vboxStack1,
                         category,
                         packages,
@@ -45,7 +45,10 @@ class GUI_Worker(Thread):
             finally:
                 self.queue.task_done()
 
-def GUISearch(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, search_term):
+
+def GUISearch(
+    self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, search_term
+):
     try:
 
         # remove previous vbox
@@ -127,13 +130,13 @@ def GUISearch(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, se
         for category in search_results:
             # NOTE: IF the yaml file name standard changes, be sure to update this, or weirdness will follow.
 
-            #subcategory = search_results[category][0].subcategory
+            # subcategory = search_results[category][0].subcategory
             vboxStack.append(Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10))
             stack.add_titled(
                 vboxStack[stack_item], str("stack" + str(len(vboxStack))), category
             )
 
-            #subcategory_desc = search_results[category][0].subcategory_description
+            # subcategory_desc = search_results[category][0].subcategory_description
             search_res_lst = search_results[category]
 
             # Multithreading!
@@ -170,7 +173,7 @@ def GUISearch(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, se
         image = Gtk.Image().new_from_pixbuf(pixbuf)
 
         # remove the focus on startup from search entry
-        ivbox.set_property("can-focus",True)
+        ivbox.set_property("can-focus", True)
         Gtk.Window.grab_focus(ivbox)
 
         # =====================================================
@@ -190,8 +193,6 @@ def GUISearch(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, se
         btnQuitSofi.set_size_request(100, 30)
         btnQuitSofi.connect("clicked", self.on_close, "delete-event")
 
-
-
         # =====================================================
         #               SEARCH BOX
         # =====================================================
@@ -199,7 +200,6 @@ def GUISearch(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, se
         self.searchEntry.set_text(search_term)
         self.searchEntry.connect("activate", self.on_search_activated)
         self.searchEntry.connect("icon-release", self.on_search_cleared)
-
 
         ivSearchbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
@@ -213,14 +213,13 @@ def GUISearch(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, se
 
         # hbox3.pack_start(btnReCache, False, False, 0)
 
-
         ivSearchbox.pack_start(self.searchEntry, False, False, 0)
 
         ivbox.pack_start(image, False, False, 0)
         ivbox.pack_start(ivSearchbox, False, False, 0)
         ivbox.pack_start(stack_switcher, True, True, 0)
 
-        #ivbox.pack_start(btnReCache, False, False, 0)
+        # ivbox.pack_start(btnReCache, False, False, 0)
         ivbox.pack_start(btnQuitSofi, False, False, 0)
 
         vbox1.pack_start(hbox0, False, False, 0)
@@ -238,6 +237,7 @@ def GUISearch(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, se
 
     except Exception as err:
         print("Exception in GUISearch(): %s" % err)
+
 
 def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
     try:
@@ -289,7 +289,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         # ==========================================================
 
         # This section sets up the tabs, and the array for dealing with the tab content
-        '''
+        """
         yaml_files_unsorted = []
         path = base_dir + "/yaml/"
         for file in os.listdir(path):
@@ -301,8 +301,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
                 )
         # Need to sort the list (Or do we? I choose to)
         yaml_files = sorted(yaml_files_unsorted)
-        '''
-
+        """
 
         # Check github for updated files
         # Functions.check_github(yaml_files)
@@ -325,12 +324,11 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         """
 
         # spawn only 1 GUI_Worker threads, as any number greater causes a Segmentation fault
-        
+
         worker = GUI_Worker(self.queue)
         # Set the worker to be True to allow processing, and avoid Blocking
         worker.daemon = True
         worker.start()
-
 
         for category in self.packages:
             # NOTE: IF the yaml file name standard changes, be sure to update this, or weirdness will follow.
@@ -375,7 +373,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         image = Gtk.Image().new_from_pixbuf(pixbuf)
 
         # remove the focus on startup from search entry
-        ivbox.set_property("can-focus",True)
+        ivbox.set_property("can-focus", True)
         Gtk.Window.grab_focus(ivbox)
 
         # =====================================================
@@ -395,8 +393,6 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         btnQuitSofi.set_size_request(100, 30)
         btnQuitSofi.connect("clicked", self.on_close, "delete-event")
 
-
-
         # =====================================================
         #               SEARCH BOX
         # =====================================================
@@ -413,8 +409,8 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         ivbox.pack_start(ivSearchbox, False, False, 0)
         ivbox.pack_start(stack_switcher, True, True, 0)
 
-        # ivbox.pack_start(hbox2, False, False, 0)
-        ivbox.pack_start(btnReCache, False, False, 0)
+        # leaving cache button out
+        # ivbox.pack_start(btnReCache, False, False, 0)
         ivbox.pack_start(btnQuitSofi, False, False, 0)
 
         vbox1.pack_start(hbox0, False, False, 0)
