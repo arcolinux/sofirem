@@ -111,9 +111,18 @@ def GUI(self, Gtk, vboxStack1, category, packages_lst):
                     # construct new switch
                     switch = Gtk.Switch()
 
-                    switch.set_active(Functions.query_pkg(package.name))
+                    """
+                        Changed to use signal state-set for switch widget.
+                        set_state(boolean) allows the switch to be enabled/disabled.
+                        When a pkg install/uninstall fails, the switch widget is enabled/disabled inside a thread.
+
+                        Changing the switch using set_active(bool), and using the signal notify::active
+                        caused a never-ending loop which would call app_toggle.
+
+                    """
+                    switch.set_state(Functions.query_pkg(package.name))
                     switch.connect(
-                        "notify::active",
+                        "state-set",
                         self.app_toggle,
                         package.name,
                         Gtk,

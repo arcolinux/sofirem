@@ -24,6 +24,7 @@ from threading import Thread
 from ProgressBarWindow import ProgressBarWindow
 from sofirem import launchtime
 from Package import Package
+from distro import id
 
 # =====================================================
 #               Base Directory
@@ -39,6 +40,7 @@ home = "/home/" + str(sudo_username)
 path_dir_cache = base_dir + "/cache/"
 packages = []
 debug = False
+distr = id()
 
 # =====================================================
 #               Create log file
@@ -165,7 +167,6 @@ def sync():
             msg_dialog.hide()
             sys.exit(1)
         else:
-
             process_sync = subprocess.run(
                 sync_str,
                 shell=False,
@@ -182,19 +183,13 @@ def sync():
 # =====================================================
 #               APP INSTALLATION
 # =====================================================
-def install(self, pkg_queue, signal, switch):
-
-    pkg = pkg_queue.get()
+def install(self):
+    pkg, signal, widget = self.pkg_queue.get()
     install_state = {}
     install_state[pkg] = None
 
     try:
-        if (
-            waitForPacmanLockFile() == False
-            and checkPackageInstalled(pkg) == False
-            and signal == "install"
-        ):
-
+        if waitForPacmanLockFile() == False and signal == "install":
             path = base_dir + "/cache/installed.lst"
 
             inst_str = ["pacman", "-S", pkg, "--needed", "--noconfirm"]
@@ -215,6 +210,9 @@ def install(self, pkg_queue, signal, switch):
             out, err = process_pkg_inst.communicate(timeout=60)
 
             if process_pkg_inst.returncode == 0:
+                # activate switch widget, install ok
+                widget.set_state(True)
+
                 get_current_installed()
                 install_state[pkg] = "INSTALLED"
 
@@ -230,11 +228,13 @@ def install(self, pkg_queue, signal, switch):
                     show_in_app_notification,
                     self,
                     "Package: %s installed" % pkg,
+                    False,
                 )
 
             else:
                 # deactivate switch widget, install failed
-                switch.set_active(False)
+                widget.set_state(False)
+
                 get_current_installed()
                 print(
                     "[ERROR] %s Package install : %s status = failed"
@@ -243,7 +243,6 @@ def install(self, pkg_queue, signal, switch):
                 if out:
                     out = out.decode("utf-8")
                     install_state[pkg] = out
-                    print(install_state[pkg])
                 print(
                     "---------------------------------------------------------------------------"
                 )
@@ -251,30 +250,23 @@ def install(self, pkg_queue, signal, switch):
                 GLib.idle_add(
                     show_in_app_notification,
                     self,
-                    "[ERROR] Failed to install package: %s" % pkg,
+                    "Package install failed for: %s" % pkg,
+                    True,
                 )
-
-                raise SystemError("Pacman failed to install package = %s" % pkg)
-
-        elif checkPackageInstalled(pkg):
-            install_state[pkg] = "INSTALLED"
-            print(
-                "[INFO] %s Package %s is already installed"
-                % (datetime.now().strftime("%H:%M:%S"), pkg)
-            )
 
     except SystemError as s:
         print("SystemError in install(): %s" % s)
     except Exception as e:
         print("Exception in install(): %s" % e)
     finally:
-        """
-        Now check install_state for any packages which failed to install
-        """
+        # Now check install_state for any packages which failed to install
         # display dependencies notification to user here
 
-        # print("error" in install_state[pkg].splitlines())
         if install_state[pkg] != "INSTALLED":
+            print(
+                "[ERROR] %s Package install failed : %s"
+                % (datetime.now().strftime("%H:%M:%S"), install_state[pkg])
+            )
             msg_dialog = message_dialog(
                 self,
                 "Error installing package",
@@ -282,33 +274,23 @@ def install(self, pkg_queue, signal, switch):
                 str(install_state[pkg]),
                 Gtk.MessageType.ERROR,
             )
+
             msg_dialog.run()
             msg_dialog.hide()
 
-        if install_state[pkg] == "INSTALLED":
-            switch.set_active(True)
-        else:
-            switch.set_active(False)
-
-        pkg_queue.task_done()
+        self.pkg_queue.task_done()
 
 
 # =====================================================
 #               APP UNINSTALLATION
 # =====================================================
-def uninstall(self, pkg_queue, signal, switch):
-
-    pkg = pkg_queue.get()
+def uninstall(self):
+    pkg, signal, widget = self.pkg_queue.get()
     uninstall_state = {}
     uninstall_state[pkg] = None
 
     try:
-        if (
-            waitForPacmanLockFile() == False
-            and checkPackageInstalled(pkg)
-            and signal == "uninstall"
-        ):
-
+        if waitForPacmanLockFile() == False and signal == "uninstall":
             path = base_dir + "/cache/installed.lst"
             uninst_str = ["pacman", "-Rs", pkg, "--noconfirm"]
 
@@ -328,6 +310,9 @@ def uninstall(self, pkg_queue, signal, switch):
             out, err = process_pkg_rem.communicate(timeout=60)
 
             if process_pkg_rem.returncode == 0:
+                # deactivate switch widget, uninstall ok
+                widget.set_state(False)
+
                 get_current_installed()
                 uninstall_state[pkg] = "REMOVED"
                 print(
@@ -342,11 +327,13 @@ def uninstall(self, pkg_queue, signal, switch):
                     show_in_app_notification,
                     self,
                     "Package: %s removed" % pkg,
+                    False,
                 )
 
             else:
-                # reactivate switch widget, the package has not been removed
-                switch.set_active(True)
+                # activate switch widget, uninstall failed
+                widget.set_state(True)
+
                 get_current_installed()
                 print(
                     "[ERROR] %s Package removal : %s status = failed"
@@ -355,7 +342,6 @@ def uninstall(self, pkg_queue, signal, switch):
                 if out:
                     out = out.decode("utf-8")
                     uninstall_state[pkg] = out.splitlines()
-                    print(out)
                 print(
                     "---------------------------------------------------------------------------"
                 )
@@ -363,17 +349,11 @@ def uninstall(self, pkg_queue, signal, switch):
                 GLib.idle_add(
                     show_in_app_notification,
                     self,
-                    "[ERROR] Failed to remove package: %s" % pkg,
+                    "Package removal failed for: %s" % pkg,
+                    True,
                 )
 
                 raise SystemError("Pacman failed to remove package = %s" % pkg)
-
-        elif checkPackageInstalled(pkg) == False:
-            uninstall_state[pkg] = "REMOVED"
-            print(
-                "[INFO] %s Package %s is already uninstalled"
-                % (datetime.now().strftime("%H:%M:%S"), pkg)
-            )
 
     except SystemError as s:
         print("SystemError in uninstall(): %s" % s)
@@ -382,12 +362,14 @@ def uninstall(self, pkg_queue, signal, switch):
         print("Exception in uninstall(): %s" % e)
 
     finally:
-        """
-        Now check uninstall_state for any packages which failed to uninstall
-        """
+        # Now check uninstall_state for any packages which failed to uninstall
         # display dependencies notification to user here
 
         if uninstall_state[pkg] != "REMOVED":
+            print(
+                "[ERROR] %s Package uninstall failed : %s"
+                % (datetime.now().strftime("%H:%M:%S"), uninstall_state[pkg])
+            )
 
             msg_dialog = message_dialog(
                 self,
@@ -400,17 +382,13 @@ def uninstall(self, pkg_queue, signal, switch):
             msg_dialog.run()
             msg_dialog.hide()
 
-        if uninstall_state[pkg] == "REMOVED":
-            switch.set_active(False)
-        else:
-            switch.set_active(True)
-
-        pkg_queue.task_done()
+        self.pkg_queue.task_done()
 
 
 # =====================================================
 #               SEARCH INDEXING
 # =====================================================
+
 
 # store a list of package metadata into memory for fast retrieval
 def storePackages():
@@ -421,7 +399,6 @@ def storePackages():
     category_dict = {}
 
     try:
-
         # get a list of yaml files
         for file in os.listdir(path):
             if file.endswith(".yaml"):
@@ -499,6 +476,8 @@ def storePackages():
             category_name = pkg.category
 
         """
+        Print dictionary for debugging
+
         for key in category_dict.keys():
             print("Category = %s" % key)
             pkg_list = category_dict[key]
@@ -524,21 +503,21 @@ def storePackages():
 #               CREATE MESSAGE DIALOG
 # =====================================================
 
+
 # show the dependencies error here which is stopping the install/uninstall pkg process
 def message_dialog(self, title, first_msg, secondary_msg, msg_type):
-
     msg_dialog = Gtk.MessageDialog(
         self,
         flags=0,
         message_type=msg_type,
         buttons=Gtk.ButtonsType.OK,
-        text=first_msg,
+        text="%s" % first_msg,
     )
 
     msg_dialog.set_title(title)
 
     if len(secondary_msg) > 0:
-        msg_dialog.format_secondary_markup("<b> %s </b> " % secondary_msg)
+        msg_dialog.format_secondary_markup("%s" % secondary_msg)
 
     return msg_dialog
 
@@ -588,7 +567,6 @@ def query_pkg(package):
             get_current_installed()
         # then, open the resulting list in read mode
         with open(path, "r") as f:
-
             # first we need to strip the new line escape sequence to ensure we don't get incorrect outcome
             pkg = package.strip("\n")
 
@@ -800,6 +778,9 @@ def checkIfProcessRunning(processName):
     return False
 
 
+# get a number of pacman processes are running
+
+
 # =====================================================
 #               CHECK PACMAN LOCK FILE
 # =====================================================
@@ -833,32 +814,6 @@ def waitForPacmanLockFile():
                 break
         else:
             return False
-
-
-# =====================================================
-#               CHECK PACKAGE INSTALLED
-# =====================================================
-
-
-def checkPackageInstalled(pkg):
-    try:
-        query_str = ["pacman", "-Q", pkg]
-
-        process_query = subprocess.Popen(
-            query_str,
-            shell=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        out, err = process_query.communicate(timeout=60)
-
-        if process_query.returncode == 0:
-            return True
-        else:
-            return False
-    except Exception as e:
-        print("Exception in checkPackageInstalled(): %s", e)
 
 
 # =====================================================
@@ -907,14 +862,20 @@ def search(self, term):
             for pkg in pkg_list:
                 if whitespace:
                     for te in term.split(" "):
-                        if te in pkg.name or te in pkg.description:
+                        if (
+                            te.lower() in pkg.name.lower()
+                            or te.lower() in pkg.description.lower()
+                        ):
                             # only unique name matches
                             if pkg not in pkg_matches:
                                 pkg_matches.append(
                                     pkg,
                                 )
                 else:
-                    if term in pkg.name or term in pkg.description:
+                    if (
+                        term.lower() in pkg.name.lower()
+                        or term.lower() in pkg.description.lower()
+                    ):
                         pkg_matches.append(
                             pkg,
                         )
@@ -992,14 +953,19 @@ def search(self, term):
 # =====================================================
 
 
-def show_in_app_notification(self, message):
+def show_in_app_notification(self, message, err):
     if self.timeout_id is not None:
         GLib.source_remove(self.timeout_id)
         self.timeout_id = None
 
-    self.notification_label.set_markup(
-        '<span foreground="white">' + message + "</span>"
-    )
+    if err == True:
+        self.notification_label.set_markup(
+            '<span background="yellow" foreground="black">' + message + "</span>"
+        )
+    else:
+        self.notification_label.set_markup(
+            '<span foreground="white">' + message + "</span>"
+        )
     self.notification_revealer.set_reveal_child(True)
     self.timeout_id = GLib.timeout_add(3000, timeOut, self)
 
@@ -1015,3 +981,29 @@ def close_in_app_notification(self):
 
 
 #######ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!
+
+# =====================================================
+#               CHECK PACKAGE INSTALLED
+# =====================================================
+
+"""
+def checkPackageInstalled(pkg):
+    try:
+        query_str = ["pacman", "-Q", pkg]
+
+        process_query = subprocess.Popen(
+            query_str,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        out, err = process_query.communicate(timeout=60)
+
+        if process_query.returncode == 0:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print("Exception in checkPackageInstalled(): %s", e)
+"""

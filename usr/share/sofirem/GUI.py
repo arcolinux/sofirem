@@ -23,7 +23,6 @@ class GUI_Worker(Thread):
             # pull what we need from the queue so we can process properly.
             items = self.queue.get()
             try:
-
                 # reached the end of items on the queue
                 if items is None:
                     break
@@ -50,7 +49,6 @@ def GUISearch(
     self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, search_term
 ):
     try:
-
         # remove previous vbox
         if self.search_activated == False:
             self.remove(self.vbox_main)
