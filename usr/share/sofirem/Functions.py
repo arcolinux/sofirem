@@ -207,7 +207,7 @@ def install(self):
                 stderr=subprocess.STDOUT,
             )
 
-            out, err = process_pkg_inst.communicate(timeout=60)
+            out, err = process_pkg_inst.communicate(timeout=180)
 
             if process_pkg_inst.returncode == 0:
                 # activate switch widget, install ok
@@ -307,7 +307,7 @@ def uninstall(self):
                 stderr=subprocess.STDOUT,
             )
 
-            out, err = process_pkg_rem.communicate(timeout=60)
+            out, err = process_pkg_rem.communicate(timeout=180)
 
             if process_pkg_rem.returncode == 0:
                 # deactivate switch widget, uninstall ok
@@ -787,7 +787,7 @@ def checkIfProcessRunning(processName):
 
 
 def waitForPacmanLockFile():
-    timeout = 60
+    timeout = 180
     start = int(time.time())
 
     while True:
@@ -998,7 +998,7 @@ def checkPackageInstalled(pkg):
             stderr=subprocess.PIPE,
         )
 
-        out, err = process_query.communicate(timeout=60)
+        out, err = process_query.communicate(timeout=180)
 
         if process_query.returncode == 0:
             return True
