@@ -45,6 +45,13 @@ echo "getting ASA script"
 wget https://raw.githubusercontent.com/arcolinux/arcolinux-spices/master/usr/share/arcolinux-spices/scripts/get-the-keys-and-repos.sh -O $workdir/usr/share/sofirem/scripts/get-the-keys-and-repos.sh
 chmod +x $workdir/usr/share/sofirem/scripts/get-the-keys-and-repos.sh
 
+echo "Keyring from ArcoLinux"
+cp /home/erik/ARCO/ARCOLINUX-REPO/arcolinux_repo/x86_64/arcolinux-keyring*pkg.tar.zst /home/erik/ARCO/ARCOLINUX/sofirem/usr/share/sofirem/packages/
+
+echo "Mirror from ArcoLinux"
+cp /home/erik/ARCO/ARCOLINUX-REPO/arcolinux_repo/x86_64/arcolinux-mirror*pkg.tar.zst /home/erik/ARCO/ARCOLINUX/sofirem/usr/share/sofirem/packages/
+
+
 # Below command will backup everything inside the project folder
 git add --all .
 
@@ -52,10 +59,7 @@ git add --all .
 echo "####################################"
 echo "Write your commit comment!"
 echo "####################################"
-echo
-echo "#########################################################"
-echo "Remember to update the keyring and keymirror package"
-echo "#########################################################"
+
 read input
 
 # Committing to the local repository with a message containing the time details and commit text
