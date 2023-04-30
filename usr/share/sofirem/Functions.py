@@ -42,6 +42,44 @@ packages = []
 debug = False
 distr = id()
 
+
+arcolinux_mirrorlist = "/etc/pacman.d/arcolinux-mirrorlist"
+pacman_conf = "/etc/pacman.conf"
+
+atestrepo = "#[arcolinux_repo_testing]\n\
+#SigLevel = Optional TrustedOnly\n\
+#Include = /etc/pacman.d/arcolinux-mirrorlist"
+
+arepo = "[arcolinux_repo]\n\
+SigLevel = Optional TrustedOnly\n\
+Include = /etc/pacman.d/arcolinux-mirrorlist"
+
+a3prepo = "[arcolinux_repo_3party]\n\
+SigLevel = Optional TrustedOnly\n\
+Include = /etc/pacman.d/arcolinux-mirrorlist"
+
+axlrepo = "[arcolinux_repo_xlarge]\n\
+SigLevel = Optional TrustedOnly\n\
+Include = /etc/pacman.d/arcolinux-mirrorlist"
+
+# =====================================================
+#               BEGIN GLOBAL FUNCTIONS
+# =====================================================
+
+
+# get position in list
+def get_position(lists, value):
+    data = [string for string in lists if value in string]
+    if len(data) != 0:
+        position = lists.index(data[0])
+        return position
+    return 0
+
+
+# =====================================================
+#               END GLOBAL FUNCTIONS
+# =====================================================
+
 # =====================================================
 #               Create log file
 # =====================================================
@@ -155,7 +193,7 @@ def sync():
             print("[ERROR] Pacman lock file found")
             print("[ERROR] Sync failed")
 
-            msg_dialog = Functions.message_dialog(
+            msg_dialog = message_dialog(
                 self,
                 "pacman -Sy",
                 "Pacman database synchronisation failed",
@@ -946,6 +984,175 @@ def search(self, term):
 
     except Exception as e:
         print("Exception in search(): %s", e)
+
+
+# =====================================================
+#               ARCOLINUX REPOS, KEYS AND MIRRORS
+# =====================================================
+
+
+def append_repo(text):
+    """Append a new repo"""
+    try:
+        with open(pacman_conf, "a", encoding="utf-8") as f:
+            f.write("\n\n")
+            f.write(text)
+    except Exception as error:
+        print(error)
+
+
+def repo_exist(value):
+    """check repo_exists"""
+    with open(pacman_conf, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        f.close()
+
+    for line in lines:
+        if value in line:
+            return True
+    return False
+
+
+# install ArcoLinux mirrorlist and key package
+def install_arcolinux_key_mirror(self):
+    base_dir = os.path.dirname(os.path.realpath(__file__))
+    pathway = base_dir + "/packages/arcolinux-keyring/"
+    file = os.listdir(pathway)
+
+    try:
+        install = "pacman -U " + pathway + str(file).strip("[]'") + " --noconfirm"
+        print("[INFO] : " + install)
+        subprocess.call(
+            install.split(" "),
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        print("[INFO] : ArcoLinux keyring is now installed")
+    except Exception as error:
+        print(error)
+
+    pathway = base_dir + "/packages/arcolinux-mirrorlist/"
+    file = os.listdir(pathway)
+    try:
+        install = "pacman -U " + pathway + str(file).strip("[]'") + " --noconfirm"
+        print("[INFO] : " + install)
+        subprocess.call(
+            install.split(" "),
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        print("[INFO] : ArcoLinux mirrorlist is now installed")
+    except Exception as error:
+        print(error)
+
+
+# remove ArcoLinux mirrorlist and key package
+def remove_arcolinux_key_mirror(self):
+    try:
+        command = "pacman -Rs arcolinux-keyring --noconfirm"
+        print("[INFO] : " + command)
+        subprocess.call(
+            command.split(" "),
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        print("[INFO] : ArcoLinux keyring is now removed")
+    except Exception as error:
+        print(error)
+
+    try:
+        command = "pacman -Rs arcolinux-mirrorlist-git --noconfirm"
+        print("[INFO] : " + command)
+        subprocess.call(
+            command.split(" "),
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        print("[INFO] : ArcoLinux mirrorlist is now removed")
+    except Exception as error:
+        print(error)
+
+
+def add_repos():
+    """add the ArcoLinux repos in /etc/pacman.conf"""
+    if not repo_exist("[arcolinux_repo_testing]"):
+        print("[INFO] : Adding ArcoLinux test repo (not used)")
+        append_repo(atestrepo)
+    if not repo_exist("[arcolinux_repo]"):
+        print("[INFO] : Adding ArcoLinux repo")
+        append_repo(arepo)
+    if not repo_exist("[arcolinux_repo_3party]"):
+        print("[INFO] : Adding ArcoLinux 3th party repo")
+        append_repo(a3prepo)
+    if not repo_exist("[arcolinux_repo_xlarge]"):
+        print("[INFO] : Adding ArcoLinux XL repo")
+        append_repo(axlrepo)
+    if repo_exist("[arcolinux_repo]"):
+        print("[INFO] : ArcoLinux repos have been installed")
+
+
+def remove_repos():
+    """remove the ArcoLinux repos in /etc/pacman.conf"""
+    try:
+        with open(pacman_conf, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+            f.close()
+
+        if repo_exist("[arcolinux_repo_testing]"):
+            pos = get_position(lines, "[arcolinux_repo_testing]")
+            del lines[pos + 3]
+            del lines[pos + 2]
+            del lines[pos + 1]
+            del lines[pos]
+
+        if repo_exist("[arcolinux_repo]"):
+            pos = get_position(lines, "[arcolinux_repo]")
+            del lines[pos + 3]
+            del lines[pos + 2]
+            del lines[pos + 1]
+            del lines[pos]
+
+        if repo_exist("[arcolinux_repo_3party]"):
+            pos = get_position(lines, "[arcolinux_repo_3party]")
+            del lines[pos + 3]
+            del lines[pos + 2]
+            del lines[pos + 1]
+            del lines[pos]
+
+        if repo_exist("[arcolinux_repo_xlarge]"):
+            pos = get_position(lines, "[arcolinux_repo_xlarge]")
+            del lines[pos + 2]
+            del lines[pos + 1]
+            del lines[pos]
+
+        with open(pacman_conf, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+            f.close()
+
+    except Exception as error:
+        print(error)
+
+
+# =====================================================
+#               CHECK IF PACKAGE IS INSTALLED
+# =====================================================
+
+
+# check if package is installed or not
+def check_package_installed(package):
+    try:
+        subprocess.check_output(
+            "pacman -Qi " + package, shell=True, stderr=subprocess.STDOUT
+        )
+        # package is installed
+        return True
+    except subprocess.CalledProcessError:
+        # package is not installed
+        return False
 
 
 # =====================================================

@@ -4,13 +4,13 @@
 
 
 # ============Functions============
-import Functions
+import Functions as fn
 import App_Frame_GUI
 from multiprocessing import cpu_count
 from queue import Queue
 from threading import Thread
 
-base_dir = Functions.os.path.dirname(Functions.os.path.realpath(__file__))
+base_dir = fn.os.path.dirname(fn.os.path.realpath(__file__))
 
 
 class GUI_Worker(Thread):
@@ -56,7 +56,7 @@ def GUISearch(
             self.remove(self.vbox_search)
 
         # lets quickly create the latest installed list.
-        Functions.get_current_installed()
+        fn.get_current_installed()
 
         # =======================================================
         #                       App Notifications
@@ -187,6 +187,7 @@ def GUISearch(
         # =====================================================
         #               QUIT BUTTON
         # =====================================================
+
         btnQuitSofi = Gtk.Button(label="Quit")
         btnQuitSofi.set_size_request(100, 30)
         btnQuitSofi.connect("clicked", self.on_close, "delete-event")
@@ -194,6 +195,7 @@ def GUISearch(
         # =====================================================
         #               SEARCH BOX
         # =====================================================
+
         self.searchEntry = Gtk.SearchEntry()
         self.searchEntry.set_text(search_term)
         self.searchEntry.connect("activate", self.on_search_activated)
@@ -218,6 +220,7 @@ def GUISearch(
         ivbox.pack_start(stack_switcher, True, True, 0)
 
         # ivbox.pack_start(btnReCache, False, False, 0)
+        ivbox.pack_start(self.btnRepos, False, False, 0)
         ivbox.pack_start(btnQuitSofi, False, False, 0)
 
         vbox1.pack_start(hbox0, False, False, 0)
@@ -247,7 +250,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
             self.show_all()
 
         # lets quickly create the latest installed list.
-        Functions.get_current_installed()
+        fn.get_current_installed()
 
         # =======================================================
         #                       App Notifications
@@ -302,7 +305,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         """
 
         # Check github for updated files
-        # Functions.check_github(yaml_files)
+        # fn.check_github(yaml_files)
         # ==========================================================
         #                       GENERATE STACK
         # ==========================================================
@@ -385,6 +388,23 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
         #           "Refresh the application cache")
 
         # =====================================================
+        #                   REPOS
+        # =====================================================
+
+        if not (
+            fn.check_package_installed("arcolinux-keyring")
+            or fn.check_package_installed("arcolinux-mirrorlist-git")
+        ):
+            self.btnRepos = Gtk.Button(label="Add repos")
+            self.btnRepos._value = 1
+        else:
+            self.btnRepos = Gtk.Button(label="Remove repos")
+            self.btnRepos._value = 2
+
+        self.btnRepos.set_size_request(100, 30)
+        self.btnRepos.connect("clicked", self.on_repos_clicked)
+
+        # =====================================================
         #               QUIT BUTTON
         # =====================================================
         btnQuitSofi = Gtk.Button(label="Quit")
@@ -409,6 +429,7 @@ def GUI(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
 
         # leaving cache button out
         # ivbox.pack_start(btnReCache, False, False, 0)
+        ivbox.pack_start(self.btnRepos, False, False, 0)
         ivbox.pack_start(btnQuitSofi, False, False, 0)
 
         vbox1.pack_start(hbox0, False, False, 0)
