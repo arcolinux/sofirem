@@ -177,7 +177,7 @@ def permissions(dst):
 # =====================================================
 #               PACMAN SYNC PACKAGE DB
 # =====================================================
-def sync():
+def sync(self):
     try:
         pacman_lock_file = "/var/lib/pacman/db.lck"
         sync_str = ["pacman", "-Sy"]
