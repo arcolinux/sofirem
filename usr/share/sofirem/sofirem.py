@@ -154,7 +154,7 @@ class Main(Gtk.Window):
 
             # run pacman -Sy to sync pacman db, else you get a lot of 404 errors
 
-            if fn.sync() == 0:
+            if fn.sync(self) == 0:
                 now = datetime.now().strftime("%H:%M:%S")
                 print("[INFO] %s Synchronising complete" % now)
                 fn.create_actions_log(
