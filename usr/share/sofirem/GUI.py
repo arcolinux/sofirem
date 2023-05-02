@@ -185,6 +185,23 @@ def GUISearch(
         #           "Refresh the application cache")
 
         # =====================================================
+        #                   REPOS
+        # =====================================================
+
+        if not (
+            fn.check_package_installed("arcolinux-keyring")
+            or fn.check_package_installed("arcolinux-mirrorlist-git")
+        ):
+            self.btnRepos = Gtk.Button(label="Add repos")
+            self.btnRepos._value = 1
+        else:
+            self.btnRepos = Gtk.Button(label="Remove repos")
+            self.btnRepos._value = 2
+
+        self.btnRepos.set_size_request(100, 30)
+        self.btnRepos.connect("clicked", self.on_repos_clicked)
+
+        # =====================================================
         #               QUIT BUTTON
         # =====================================================
 

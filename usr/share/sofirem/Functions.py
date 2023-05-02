@@ -41,7 +41,10 @@ path_dir_cache = base_dir + "/cache/"
 packages = []
 debug = False
 distr = id()
-
+pacman_lock_file = "/var/lib/pacman/db.lck"
+# this timeout is only for the pacman lock file, install/uninstall processes
+# 10m timeout
+process_timeout = 600
 
 arcolinux_mirrorlist = "/etc/pacman.d/arcolinux-mirrorlist"
 pacman_conf = "/etc/pacman.conf"
@@ -179,7 +182,6 @@ def permissions(dst):
 # =====================================================
 def sync(self):
     try:
-        pacman_lock_file = "/var/lib/pacman/db.lck"
         sync_str = ["pacman", "-Sy"]
         now = datetime.now().strftime("%H:%M:%S")
         print("[INFO] %s Synchronising package databases" % now)
@@ -190,8 +192,8 @@ def sync(self):
 
         # Pacman will not work if there is a lock file
         if os.path.exists(pacman_lock_file):
-            print("[ERROR] Pacman lock file found")
-            print("[ERROR] Sync failed")
+            print("[ERROR] %s Pacman lock file found: %s" % (now, pacman_lock_file))
+            print("[ERROR] %s Synchronisation failed" % now)
 
             msg_dialog = message_dialog(
                 self,
@@ -210,7 +212,7 @@ def sync(self):
                 shell=False,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                timeout=60,
+                timeout=120,
             )
 
         return process_sync.returncode
@@ -222,96 +224,189 @@ def sync(self):
 #               APP INSTALLATION
 # =====================================================
 def install(self):
-    pkg, signal, widget = self.pkg_queue.get()
+    pkg, action, widget = self.pkg_queue.get()
     install_state = {}
-    install_state[pkg] = None
+    install_state[pkg] = "QUEUED"
+    thread_alive = False
+    lockfile_thread = "thread_waitForPacmanLockFile"
+
+    # check the pacman lock file thread isn't already running
+    for thread in threading.enumerate():
+        if thread.name == lockfile_thread and thread.is_alive():
+            thread_alive = True
+            break
+
+    if thread_alive == False:
+        print(
+            "[DEBUG] %s Starting waitForPacmanLockFile thread"
+            % datetime.now().strftime("%H:%M:%S")
+        )
+
+        th = Thread(
+            name=lockfile_thread,
+            target=waitForPacmanLockFile,
+        )
+
+        th.start()
+    else:
+        print(
+            "[DEBUG] %s waitForPacmanLockFile thread is already running"
+            % datetime.now().strftime("%H:%M:%S")
+        )
+
+        print(
+            "[INFO] %s Another Package install is in progress"
+            % datetime.now().strftime("%H:%M:%S")
+        )
 
     try:
-        if waitForPacmanLockFile() == False and signal == "install":
-            path = base_dir + "/cache/installed.lst"
+        print(
+            "[DEBUG] %s PkgInstallThread: Package install queue size : %s"
+            % (datetime.now().strftime("%H:%M:%S"), len(self.pkg_inst_deque))
+        )
 
-            inst_str = ["pacman", "-S", pkg, "--needed", "--noconfirm"]
+        if len(self.pkg_inst_deque) == 5:
+            print(
+                "[WARN] %s Package install queue size hit limit of 5"
+                % (datetime.now().strftime("%H:%M:%S"))
+            )
+            widget.set_state(False)
 
-            now = datetime.now().strftime("%H:%M:%S")
-            print("[INFO] %s Installing package %s " % (now, pkg))
-            create_actions_log(
-                launchtime, "[INFO] " + now + " Installing package " + pkg + "\n"
+            msg_dialog = message_dialog(
+                self,
+                "Please wait until previous Pacman transactions are completed",
+                "There are a maximum of 5 packages added to the queue",
+                "Waiting for previous Pacman transactions to complete",
+                Gtk.MessageType.WARNING,
             )
 
-            process_pkg_inst = subprocess.Popen(
-                inst_str,
-                shell=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
+            msg_dialog.run()
+            msg_dialog.hide()
+        else:
+            """
+            Running waitForPacmanLockFile() inside a separate thread
+            will not add further packages to the queue
+            """
+            if action == "install":
+                path = base_dir + "/cache/installed.lst"
 
-            out, err = process_pkg_inst.communicate(timeout=180)
+                inst_str = ["pacman", "-S", pkg, "--needed", "--noconfirm"]
 
-            if process_pkg_inst.returncode == 0:
-                # activate switch widget, install ok
-                widget.set_state(True)
-
-                get_current_installed()
-                install_state[pkg] = "INSTALLED"
-
-                print(
-                    "[INFO] %s Package install : %s status = completed"
-                    % (datetime.now().strftime("%H:%M:%S"), pkg)
-                )
-                print(
-                    "---------------------------------------------------------------------------"
+                now = datetime.now().strftime("%H:%M:%S")
+                print("[INFO] %s Installing package %s " % (now, pkg))
+                create_actions_log(
+                    launchtime, "[INFO] " + now + " Installing package " + pkg + "\n"
                 )
 
-                GLib.idle_add(
-                    show_in_app_notification,
-                    self,
-                    "Package: %s installed" % pkg,
-                    False,
+                process_pkg_inst = subprocess.Popen(
+                    inst_str,
+                    shell=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
                 )
 
-            else:
-                # deactivate switch widget, install failed
-                widget.set_state(False)
+                out, err = process_pkg_inst.communicate(timeout=process_timeout)
 
-                get_current_installed()
-                print(
-                    "[ERROR] %s Package install : %s status = failed"
-                    % (datetime.now().strftime("%H:%M:%S"), pkg)
-                )
-                if out:
-                    out = out.decode("utf-8")
-                    install_state[pkg] = out
-                print(
-                    "---------------------------------------------------------------------------"
-                )
+                if process_pkg_inst.returncode == 0:
+                    # activate switch widget, install ok
+                    widget.set_state(True)
 
-                GLib.idle_add(
-                    show_in_app_notification,
-                    self,
-                    "Package install failed for: %s" % pkg,
-                    True,
-                )
+                    get_current_installed()
+                    install_state[pkg] = "INSTALLED"
 
+                    print(
+                        "[INFO] %s Package install : %s status = completed"
+                        % (datetime.now().strftime("%H:%M:%S"), pkg)
+                    )
+                    print(
+                        "---------------------------------------------------------------------------"
+                    )
+
+                    GLib.idle_add(
+                        show_in_app_notification,
+                        self,
+                        "Package: %s installed" % pkg,
+                        False,
+                    )
+
+                else:
+                    # deactivate switch widget, install failed
+                    widget.set_state(False)
+
+                    get_current_installed()
+                    print(
+                        "[ERROR] %s Package install : %s status = failed"
+                        % (datetime.now().strftime("%H:%M:%S"), pkg)
+                    )
+                    if out:
+                        out = out.decode("utf-8")
+                        install_state[pkg] = out
+                    print(
+                        "---------------------------------------------------------------------------"
+                    )
+                    if (
+                        "error: could not lock database: File exists"
+                        not in install_state[pkg]
+                    ):
+                        GLib.idle_add(
+                            show_in_app_notification,
+                            self,
+                            "Package install failed for: %s" % pkg,
+                            True,
+                        )
+                    raise SystemError("Pacman failed to install package = %s" % pkg)
+    except TimeoutError as t:
+        print("TimeoutError in install(): %s" % t)
+        process_pkg_inst.terminate()
     except SystemError as s:
         print("SystemError in install(): %s" % s)
+        process_pkg_inst.terminate()
     except Exception as e:
         print("Exception in install(): %s" % e)
+        process_pkg_inst.terminate()
     finally:
         # Now check install_state for any packages which failed to install
         # display dependencies notification to user here
 
-        if install_state[pkg] != "INSTALLED":
+        # remove the package from the deque
+        self.pkg_inst_deque.remove(pkg)
+
+        if (
+            install_state[pkg] != None
+            and install_state[pkg] != "INSTALLED"
+            and install_state[pkg] != "QUEUED"
+            and len(install_state[pkg]) > 0
+        ):
             print(
                 "[ERROR] %s Package install failed : %s"
                 % (datetime.now().strftime("%H:%M:%S"), install_state[pkg])
             )
-            msg_dialog = message_dialog(
-                self,
-                "Error installing package",
-                "Failed to install package: %s" % pkg,
-                str(install_state[pkg]),
-                Gtk.MessageType.ERROR,
-            )
+
+            proc = get_pacman_process()
+
+            if proc:
+                print(
+                    "[DEBUG] %s Pacman status = %s"
+                    % (datetime.now().strftime("%H:%M:%S"), str(proc))
+                )
+
+                msg_dialog = message_dialog(
+                    self,
+                    "Error installing package",
+                    "Failed to install package: %s" % pkg,
+                    str(install_state[pkg])
+                    + "\n"
+                    + "Pacman process currently running: %s " % proc,
+                    Gtk.MessageType.ERROR,
+                )
+            else:
+                msg_dialog = message_dialog(
+                    self,
+                    "Error installing package",
+                    "Failed to install package: %s" % pkg,
+                    str(install_state[pkg]),
+                    Gtk.MessageType.ERROR,
+                )
 
             msg_dialog.run()
             msg_dialog.hide()
@@ -323,97 +418,149 @@ def install(self):
 #               APP UNINSTALLATION
 # =====================================================
 def uninstall(self):
-    pkg, signal, widget = self.pkg_queue.get()
+    pkg, action, widget = self.pkg_queue.get()
     uninstall_state = {}
-    uninstall_state[pkg] = None
+    uninstall_state[pkg] = "QUEUED"
 
     try:
-        if waitForPacmanLockFile() == False and signal == "uninstall":
-            path = base_dir + "/cache/installed.lst"
-            uninst_str = ["pacman", "-Rs", pkg, "--noconfirm"]
+        if action == "uninstall":
+            # peek at the install queue
 
-            now = datetime.now().strftime("%H:%M:%S")
-            print("[INFO] %s Removing package : %s" % (now, pkg))
-            create_actions_log(
-                launchtime, "[INFO] " + now + " Removing package " + pkg + "\n"
-            )
-
-            process_pkg_rem = subprocess.Popen(
-                uninst_str,
-                shell=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-
-            out, err = process_pkg_rem.communicate(timeout=180)
-
-            if process_pkg_rem.returncode == 0:
-                # deactivate switch widget, uninstall ok
-                widget.set_state(False)
-
-                get_current_installed()
-                uninstall_state[pkg] = "REMOVED"
-                print(
-                    "[INFO] %s Package removal : %s status = completed"
-                    % (datetime.now().strftime("%H:%M:%S"), pkg)
-                )
-                print(
-                    "---------------------------------------------------------------------------"
-                )
-
-                GLib.idle_add(
-                    show_in_app_notification,
-                    self,
-                    "Package: %s removed" % pkg,
-                    False,
-                )
-
-            else:
-                # activate switch widget, uninstall failed
+            # do not allow a package to be uninstalled while it is being installed
+            if pkg in self.pkg_inst_deque:
                 widget.set_state(True)
-
-                get_current_installed()
-                print(
-                    "[ERROR] %s Package removal : %s status = failed"
-                    % (datetime.now().strftime("%H:%M:%S"), pkg)
+                msg_dialog = message_dialog(
+                    self,
+                    "Error removing package",
+                    "Package: %s is installing / queued to be installed" % pkg,
+                    "Cannot remove a package which is installing",
+                    Gtk.MessageType.ERROR,
                 )
-                if out:
-                    out = out.decode("utf-8")
-                    uninstall_state[pkg] = out.splitlines()
+
+                msg_dialog.run()
+                msg_dialog.hide()
+            else:
+                path = base_dir + "/cache/installed.lst"
+                uninst_str = ["pacman", "-Rs", pkg, "--noconfirm"]
+
+                now = datetime.now().strftime("%H:%M:%S")
+                print("[INFO] %s Removing package : %s" % (now, pkg))
+                create_actions_log(
+                    launchtime, "[INFO] " + now + " Removing package " + pkg + "\n"
+                )
+
+                process_pkg_rem = subprocess.Popen(
+                    uninst_str,
+                    shell=False,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
+
+                out, err = process_pkg_rem.communicate(timeout=process_timeout)
+
+                if process_pkg_rem.returncode == 0:
+                    # deactivate switch widget, uninstall ok
+                    widget.set_state(False)
+
+                    get_current_installed()
+                    uninstall_state[pkg] = "REMOVED"
+                    print(
+                        "[INFO] %s Package removal : %s status = completed"
+                        % (datetime.now().strftime("%H:%M:%S"), pkg)
+                    )
+                    print(
+                        "---------------------------------------------------------------------------"
+                    )
+
+                    GLib.idle_add(
+                        show_in_app_notification,
+                        self,
+                        "Package: %s removed" % pkg,
+                        False,
+                    )
+
+                else:
+                    if out:
+                        out = out.decode("utf-8")
+                        if len(out) > 0:
+                            uninstall_state[pkg] = out.splitlines()
+                            get_current_installed()
+                            if (
+                                "error: target not found: %s" % pkg
+                                in uninstall_state[pkg]
+                            ):
+                                widget.set_state(False)
+                                uninstall_state[pkg] = "REMOVED"
+                                print(
+                                    "[INFO] %s Package removal : %s status = completed"
+                                    % (datetime.now().strftime("%H:%M:%S"), pkg)
+                                )
+                                GLib.idle_add(
+                                    show_in_app_notification,
+                                    self,
+                                    "Package: %s removed" % pkg,
+                                    False,
+                                )
+                            else:
+                                # activate switch widget, uninstall failed
+                                widget.set_state(True)
+
+                                print(
+                                    "[ERROR] %s Package removal : %s status = failed"
+                                    % (datetime.now().strftime("%H:%M:%S"), pkg)
+                                )
+                                if (
+                                    "error: could not lock database: File exists"
+                                    not in uninstall_state[pkg]
+                                ):
+                                    GLib.idle_add(
+                                        show_in_app_notification,
+                                        self,
+                                        "Package removal failed for: %s" % pkg,
+                                        True,
+                                    )
+
+                                raise SystemError(
+                                    "Pacman failed to remove package = %s" % pkg
+                                )
+                        else:
+                            # the package was already removed as a dependency from another package
+                            # deactivate the widget
+                            widget.set_state(False)
+
                 print(
                     "---------------------------------------------------------------------------"
                 )
-
-                GLib.idle_add(
-                    show_in_app_notification,
-                    self,
-                    "Package removal failed for: %s" % pkg,
-                    True,
-                )
-
-                raise SystemError("Pacman failed to remove package = %s" % pkg)
-
+    except TimeoutError as t:
+        print("TimeoutError in install(): %s" % t)
+        process_pkg_rem.terminate()
     except SystemError as s:
         print("SystemError in uninstall(): %s" % s)
-
+        process_pkg_rem.terminate()
     except Exception as e:
         print("Exception in uninstall(): %s" % e)
+        process_pkg_rem.terminate()
 
     finally:
         # Now check uninstall_state for any packages which failed to uninstall
         # display dependencies notification to user here
 
-        if uninstall_state[pkg] != "REMOVED":
+        if (
+            uninstall_state[pkg] != None
+            and len(uninstall_state[pkg]) > 0
+            and uninstall_state[pkg] != "REMOVED"
+            and uninstall_state[pkg] != "QUEUED"
+        ):
             print(
                 "[ERROR] %s Package uninstall failed : %s"
-                % (datetime.now().strftime("%H:%M:%S"), uninstall_state[pkg])
+                % (datetime.now().strftime("%H:%M:%S"), str(uninstall_state[pkg]))
             )
 
             msg_dialog = message_dialog(
                 self,
                 "Error removing package",
                 "Failed to remove package: %s" % pkg,
-                str(uninstall_state[pkg]),
+                " ".join(uninstall_state[pkg]),
                 Gtk.MessageType.ERROR,
             )
 
@@ -535,6 +682,7 @@ def storePackages():
         return sorted_dict
     except Exception as e:
         print("Exception in storePackages() : %s" % e)
+        sys.exit(0)
 
 
 # =====================================================
@@ -825,33 +973,62 @@ def checkIfProcessRunning(processName):
 
 
 def waitForPacmanLockFile():
-    timeout = 180
     start = int(time.time())
 
-    while True:
-        if os.path.exists("/var/lib/pacman/db.lck"):
-            print(
-                "[INFO] %s Waiting for previous Pacman transaction to complete"
-                % datetime.now().strftime("%H:%M:%S")
-            )
+    try:
+        while True:
+            if os.path.exists(pacman_lock_file):
+                time.sleep(5)
 
-            time.sleep(5)
+                elapsed = int(time.time()) + 5
 
-            elapsed = int(time.time()) + 5
-
-            print(
-                "[INFO] %s Elapsed duration : %s"
-                % (datetime.now().strftime("%H:%M:%S"), (elapsed - start))
-            )
-
-            if (elapsed - start) >= timeout:
                 print(
-                    "[WARN] %s Waiting for previous Pacman transaction timed out after %ss"
-                    % (datetime.now().strftime("%H:%M:%S"), timeout)
+                    "[DEBUG] %s Pacman is busy.. elapsed duration: %ss"
+                    % (datetime.now().strftime("%H:%M:%S"), (elapsed - start))
                 )
-                break
-        else:
-            return False
+
+                proc = get_pacman_process()
+
+                if proc:
+                    print(
+                        "[DEBUG] %s Pacman process: %s"
+                        % (datetime.now().strftime("%H:%M:%S"), str(proc))
+                    )
+                else:
+                    print(
+                        "[DEBUG] %s Process completed, Pacman is ready"
+                        % datetime.now().strftime("%H:%M:%S")
+                    )
+                    return
+
+                if (elapsed - start) >= process_timeout:
+                    print(
+                        "[WARN] %s Waiting for previous Pacman transaction to complete timed out after %ss"
+                        % (datetime.now().strftime("%H:%M:%S"), process_timeout)
+                    )
+                    return
+            else:
+                print(
+                    "[DEBUG] %s Pacman is ready" % datetime.now().strftime("%H:%M:%S")
+                )
+                return
+    except Exception as e:
+        print("Exception in waitForPacmanLockFile(): %s " % e)
+
+
+# this gets info on the pacman process currently running
+def get_pacman_process():
+    try:
+        for proc in psutil.process_iter():
+            try:
+                pinfo = proc.as_dict(attrs=["pid", "name", "create_time"])
+                if pinfo["name"] == "pacman":
+                    return " ".join(proc.cmdline())
+
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+    except Exception as e:
+        print("Exception in get_pacman_process() : %s" % e)
 
 
 # =====================================================
@@ -917,10 +1094,6 @@ def search(self, term):
                         pkg_matches.append(
                             pkg,
                         )
-        """
-        for p in pkg_matches:
-            print(p.name)
-        """
 
         # filter the results so that each category holds a list of package
 
@@ -1207,30 +1380,32 @@ def close_in_app_notification(self):
     self.timeout_id = None
 
 
-#######ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!
-
 # =====================================================
-#               CHECK PACKAGE INSTALLED
+#               KILL PACMAN PROCESS
 # =====================================================
 
 """
-def checkPackageInstalled(pkg):
+    Since the app could be quit, killed during a pacman transaction.
+    The pacman process spawned by the install/uninstall threads, needs to be terminated too.
+    Otherwise the app will hang waiting for pacman to complete its transaction.
+"""
+
+
+def terminate_pacman():
     try:
-        query_str = ["pacman", "-Q", pkg]
+        for proc in psutil.process_iter():
+            try:
+                pinfo = proc.as_dict(attrs=["pid", "name", "create_time"])
+                if pinfo["name"] == "pacman":
+                    proc.kill()
 
-        process_query = subprocess.Popen(
-            query_str,
-            shell=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
 
-        out, err = process_query.communicate(timeout=180)
-
-        if process_query.returncode == 0:
-            return True
-        else:
-            return False
+        if os.path.exists(pacman_lock_file):
+            os.unlink(pacman_lock_file)
     except Exception as e:
-        print("Exception in checkPackageInstalled(): %s", e)
-"""
+        print("Exception in terminate_pacman() : %s" % e)
+
+
+#######ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!
