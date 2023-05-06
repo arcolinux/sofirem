@@ -105,6 +105,14 @@ class Main(Gtk.Window):
                 "---------------------------------------------------------------------------"
             )
 
+            # creating log directories - not makedirs for fish
+            if not os.path.exists(fn.log_dir):
+                fn.mkdir(fn.log_dir)
+            if not os.path.exists(fn.act_log_dir):
+                fn.mkdir(fn.act_log_dir)
+            if not os.path.exists(fn.sof_log_dir):
+                fn.mkdir(fn.sof_log_dir)
+
             # Create installed.lst file for first time
             now = datetime.now().strftime("%H:%M:%S")
             fn.get_current_installed()

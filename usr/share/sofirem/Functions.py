@@ -25,6 +25,7 @@ from ProgressBarWindow import ProgressBarWindow
 from sofirem import launchtime
 from Package import Package
 from distro import id
+from os import mkdir
 
 # =====================================================
 #               Base Directory
