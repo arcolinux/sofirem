@@ -33,6 +33,7 @@
   selected: false
   expanded: true
   packages:
+    - anydesk-bin
     - arcolinux-teamviewer
     - krdc
     - nomachine
