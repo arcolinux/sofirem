@@ -41,7 +41,7 @@ case "$session" in
     test -z "$(xauth list)" || echo "[INFO] Xauth session = OK"
   ;;
   *)
-    # anything here is an unknown session, most likely ATT will fail to load
+    # anything here is an unknown session, most likely Sofirem will fail to load
     echo "[WARN] Cannot verify session for user."
   ;;
 esac

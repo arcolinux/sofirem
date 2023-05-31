@@ -1,23 +1,49 @@
 frame#awesome * {
-    padding-left: 20px;
-    padding-right: 20px;
-    padding-bottom: 20px;
-    padding-top: 10px;
-    border-color: transparent;
+  padding-left: 20px;
+  padding-right: 20px;
+  padding-bottom: 20px;
+  padding-top: 10px;
+  border-color: transparent;
 }
 
 box#vbox {
-    padding-right: 20px;
+  padding-right: 20px;
 }
 
 #sidebar label {
-    font-size: 14px;
-    font-weight: 500;
-    padding-left: 15px;
-    padding-right: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  padding-left: 15px;
+  padding-right: 15px;
 }
 
 label#title {
-    font-size: 20px;
-    font-weight: 600;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+label#lbl_package_version {
+  color: white;
+  background-color: #5481e5;
+  border: 3px solid #5481e5;
+  border-radius: 100px;
+  font-size: 80%;
+  font-weight: bold;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+infobar#infobar_info {
+  background-color: #5481e5;
+  color: white;
+}
+
+infobar#infobar_error {
+  background-color: #9d261d;
+  color: white;
+}
+
+infobar#infobar_warning {
+  background-color: #ffcc00;
+  color: black;
 }

@@ -1,8 +1,4 @@
-"""
-    This class is to encapsulate package metadata.
-    It is is used inside the following:
-    - Functions.userSearch()
-"""
+# This class is to encapsulate package metadata, taken from the yaml files stored inside the sofirem github repository
 
 
 class Package(object):
@@ -13,9 +9,11 @@ class Package(object):
         category,
         subcategory,
         subcategory_description,
+        version,
     ):
         self.name = name
         self.description = description
         self.category = category
         self.subcategory = subcategory
         self.subcategory_description = subcategory_description
+        self.version = version

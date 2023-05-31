@@ -4,28 +4,23 @@
 
 import os
 import sys
-import shutil
 import psutil
 import time
 import datetime
 from datetime import datetime, timedelta
 import subprocess
-import threading  # noqa
+import threading
 import gi
-import requests
-from multiprocessing import cpu_count
-from multiprocessing.pool import ThreadPool
-
-# import configparser
-gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk  # noqa
-from queue import Queue  # Multithreading the caching
+import logging
+import shutil
 from threading import Thread
-from ProgressBarWindow import ProgressBarWindow
-from sofirem import launchtime
 from Package import Package
+from ui.MessageDialog import MessageDialog
 from distro import id
-from os import mkdir
+from os import makedirs
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
 
 # =====================================================
 #               Base Directory
@@ -42,89 +37,109 @@ path_dir_cache = base_dir + "/cache/"
 packages = []
 debug = False
 distr = id()
-pacman_lock_file = "/var/lib/pacman/db.lck"
-# this timeout is only for the pacman lock file, install/uninstall processes
+sofirem_lockfile = "/tmp/sofirem.lock"
+sofirem_pidfile = "/tmp/sofirem.pid"
 # 10m timeout
 process_timeout = 600
 
 arcolinux_mirrorlist = "/etc/pacman.d/arcolinux-mirrorlist"
 pacman_conf = "/etc/pacman.conf"
+pacman_conf_backup = "/etc/pacman.conf.bak"
+pacman_logfile = "/var/log/pacman.log"
+pacman_lockfile = "/var/lib/pacman/db.lck"
 
-atestrepo = "#[arcolinux_repo_testing]\n\
-#SigLevel = Optional TrustedOnly\n\
-#Include = /etc/pacman.d/arcolinux-mirrorlist"
+arco_test_repo = [
+    "#[arcolinux_repo_testing]",
+    "#SigLevel = Optional TrustedOnly",
+    "#Include = /etc/pacman.d/arcolinux-mirrorlist",
+]
 
-arepo = "[arcolinux_repo]\n\
-SigLevel = Optional TrustedOnly\n\
-Include = /etc/pacman.d/arcolinux-mirrorlist"
+arco_repo = [
+    "[arcolinux_repo]",
+    "SigLevel = Optional TrustedOnly",
+    "Include = /etc/pacman.d/arcolinux-mirrorlist",
+]
 
-a3prepo = "[arcolinux_repo_3party]\n\
-SigLevel = Optional TrustedOnly\n\
-Include = /etc/pacman.d/arcolinux-mirrorlist"
+arco_3rd_party_repo = [
+    "[arcolinux_repo_3party]",
+    "SigLevel = Optional TrustedOnly",
+    "Include = /etc/pacman.d/arcolinux-mirrorlist",
+]
 
-axlrepo = "[arcolinux_repo_xlarge]\n\
-SigLevel = Optional TrustedOnly\n\
-Include = /etc/pacman.d/arcolinux-mirrorlist"
-
-# =====================================================
-#               BEGIN GLOBAL FUNCTIONS
-# =====================================================
-
-
-# get position in list
-def get_position(lists, value):
-    data = [string for string in lists if value in string]
-    if len(data) != 0:
-        position = lists.index(data[0])
-        return position
-    return 0
+arco_xlrepo = [
+    "[arcolinux_repo_xlarge]",
+    "SigLevel = Optional TrustedOnly",
+    "Include = /etc/pacman.d/arcolinux-mirrorlist",
+]
 
 
-# =====================================================
-#               END GLOBAL FUNCTIONS
-# =====================================================
+log_dir = "/var/log/sofirem/%s/" % datetime.now().strftime("%Y-%m-%d")
+event_log_file = "%s/%s-event.log" % (
+    log_dir,
+    datetime.now().strftime("%H-%M-%S"),
+)
 
-# =====================================================
-#               Create log file
-# =====================================================
+# Create log directory and the event log file
+try:
+    if not os.path.exists(log_dir):
+        makedirs(log_dir)
 
-log_dir = "/var/log/sofirem/"
-sof_log_dir = "/var/log/sofirem/software/"
-act_log_dir = "/var/log/sofirem/actions/"
+    print("[INFO] Log directory = %s" % log_dir)
+
+except os.error as oe:
+    print("[ERROR] Exception in setup log_directory: %s" % oe)
+    sys.exit(1)
+
+logger = logging.getLogger("logger")
+
+logger.setLevel(logging.DEBUG)
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+fh = logging.FileHandler(event_log_file, mode="a", encoding="utf-8", delay=False)
+fh.setLevel(level=logging.INFO)
+
+# create formatter
+formatter = logging.Formatter(
+    "%(asctime)s:%(levelname)s > %(message)s", "%Y-%m-%d %H:%M:%S"
+)
+# add formatter to ch
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
+
+# add fh to logger
+logger.addHandler(fh)
 
 
+# a before state of packages
 def create_packages_log():
-    now = datetime.now().strftime("%H:%M:%S")
-    print("[INFO] " + now + " Creating a log file in /var/log/sofirem/software")
-    destination = sof_log_dir + "software-log-" + launchtime
-    command = "sudo pacman -Q > " + destination
-    subprocess.call(
-        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-    )
-    create_actions_log(
-        launchtime,
-        "[INFO] %s Creating a log file in /var/log/sofirem/software " % now + "\n",
-    )
-    # GLib.idle_add(
-    #     show_in_app_notification, "is already installed - nothing to do", "test"
-    # )
+    try:
+        logger.info("Creating a list of currently installed packages")
+        packages_log = "%s-packages.log" % datetime.now().strftime("%H-%M-%S")
+        logger.info("Saving in %s" % packages_log)
+        cmd = ["pacman", "-Q"]
 
+        with subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            with open("%s/%s" % (log_dir, packages_log), "w") as f:
+                f.write(
+                    "# Created by Sofirem on %s\n"
+                    % datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                )
 
-def create_actions_log(launchtime, message):
-    if not os.path.exists(act_log_dir + launchtime):
-        try:
-            with open(act_log_dir + launchtime, "x", encoding="utf8") as f:
-                f.close
-        except Exception as error:
-            print(error)
-
-    if os.path.exists(act_log_dir + launchtime):
-        try:
-            with open(act_log_dir + launchtime, "a", encoding="utf-8") as f:
-                f.write(message)
-                f.close()
-        except Exception as error:
-            print(error)
+                for line in process.stdout:
+                    f.write("%s" % line)
+    except Exception as e:
+        logger.error("Exception in create_packages_log(): %s" % e)
 
 
 # =====================================================
@@ -138,19 +153,19 @@ def _get_position(lists, value):
     return position
 
 
-def isfileStale(filepath, staleDays, staleHours, staleMinutes):
+def is_file_stale(filepath, stale_days, stale_hours, stale_minutes):
     # first, lets obtain the datetime of the day that we determine data to be "stale"
     now = datetime.now()
     # For the purposes of this, we are assuming that one would have the app open longer than 5 minutes if installing.
-    staleDateTime = now - timedelta(
-        days=staleDays, hours=staleHours, minutes=staleMinutes
+    stale_datetime = now - timedelta(
+        days=stale_days, hours=stale_hours, minutes=stale_minutes
     )
     # Check to see if the file path is in existence.
     if os.path.exists(filepath):
         # if the file exists, when was it made?
-        fileCreated = datetime.fromtimestamp(os.path.getctime(filepath))
+        file_created = datetime.fromtimestamp(os.path.getctime(filepath))
         # file is older than the time delta identified above
-        if fileCreated < staleDateTime:
+        if file_created < stale_datetime:
             return True
     return False
 
@@ -175,243 +190,356 @@ def permissions(dst):
         subprocess.call(["chown", "-R", sudo_username + ":" + group, dst], shell=False)
 
     except Exception as e:
-        print(e)
+        logger.error(e)
 
 
 # =====================================================
 #               PACMAN SYNC PACKAGE DB
 # =====================================================
-def sync(self):
+def sync_package_db():
     try:
         sync_str = ["pacman", "-Sy"]
-        now = datetime.now().strftime("%H:%M:%S")
-        print("[INFO] %s Synchronising package databases" % now)
-        create_actions_log(
-            launchtime,
-            "[INFO] %s Synchronising package databases " % now + "\n",
+        logger.info("Synchronising pacman package databases")
+        process_sync = subprocess.run(
+            sync_str,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=process_timeout,
         )
 
-        # Pacman will not work if there is a lock file
-        if os.path.exists(pacman_lock_file):
-            print("[ERROR] %s Pacman lock file found: %s" % (now, pacman_lock_file))
-            print("[ERROR] %s Synchronisation failed" % now)
-
-            msg_dialog = message_dialog(
-                self,
-                "pacman -Sy",
-                "Pacman database synchronisation failed",
-                "Pacman lock file found inside %s" % pacman_lock_file,
-                Gtk.MessageType.ERROR,
-            )
-
-            msg_dialog.run()
-            msg_dialog.hide()
-            sys.exit(1)
+        if process_sync.returncode == 0:
+            return None
         else:
-            process_sync = subprocess.run(
-                sync_str,
-                shell=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                timeout=120,
+            if process_sync.stdout:
+                out = str(process_sync.stdout.decode("utf-8"))
+                logger.error(out)
+
+                return out
+
+    except Exception as e:
+        logger.error("Exception in sync(): %s" % e)
+
+
+# =====================================================
+#               PACMAN INSTALL/UNINSTALL PROCESS
+# =====================================================
+
+
+# this is run inside a separate thread
+def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
+    try:
+        # store process std out into a list, if there are errors display to user once the process completes
+        process_stdout_lst = []
+        with subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            progress_dialog.pkg_dialog_closed = False
+            self.in_progress = True
+            widget.set_sensitive(False)
+            self.switch_pkg_version.set_sensitive(False)
+            self.switch_arco_repo.set_sensitive(False)
+
+            line = (
+                "Pacman is processing the %s of package %s \n\n  Command running = %s\n\n"
+                % (action, pkg.name, " ".join(cmd))
             )
 
-        return process_sync.returncode
-    except Exception as e:
-        print("Exception in sync(): %s" % e)
+            GLib.idle_add(
+                update_progress_textview,
+                self,
+                line,
+                progress_dialog,
+                priority=GLib.PRIORITY_DEFAULT,
+            )
+
+            logger.debug("Pacman is now processing the request")
+
+            # poll for the process to complete
+            # read stdout as it comes in, update the progress textview
+
+            # poll() Check if child process has terminated.
+            # Set and return returncode attribute. Otherwise, returns None.
+
+            while True:
+                if process.poll() is not None:
+                    break
+
+                if progress_dialog.pkg_dialog_closed is False:
+                    for line in process.stdout:
+                        GLib.idle_add(
+                            update_progress_textview,
+                            self,
+                            line,
+                            progress_dialog,
+                            priority=GLib.PRIORITY_DEFAULT,
+                        )
+                        process_stdout_lst.append(line)
+
+                    time.sleep(0.3)
+                else:
+                    # increase wait time to reduce cpu load, no textview updates required since dialog is closed
+                    # since the progress dialog window is closed, capture errors and then later display it
+                    for line in process.stdout:
+                        process_stdout_lst.append(line)
+                    time.sleep(1)
+
+            returncode = process.poll()
+
+            logger.debug("Pacman process return code = %s" % returncode)
+
+            logger.info(
+                "Pacman process completed for package = %s and action = %s"
+                % (pkg.name, action)
+            )
+
+            GLib.idle_add(
+                refresh_ui,
+                self,
+                action,
+                widget,
+                pkg,
+                progress_dialog,
+                process_stdout_lst,
+                priority=GLib.PRIORITY_DEFAULT,
+            )
+
+    except TimeoutError as t:
+        logger.error("TimeoutError in %s start_subprocess(): %s" % (action, t))
+        process.terminate()
+        progress_dialog.btn_package_progress_close.set_sensitive(True)
+        self.switch_pkg_version.set_sensitive(True)
+        self.switch_arco_repo.set_sensitive(True)
+        # deactivate switch widget, install failed
+
+    except SystemError as s:
+        logger.error("SystemError in %s start_subprocess(): %s" % (action, s))
+        process.terminate()
+        progress_dialog.btn_package_progress_close.set_sensitive(True)
+        self.switch_pkg_version.set_sensitive(True)
+        self.switch_arco_repo.set_sensitive(True)
+        # deactivate switch widget, install failed
+
+
+# refresh ui components, once the process completes
+# show notification dialog to user if errors are encountered during package install/uninstall
+def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
+    logger.debug("Toggling switch state")
+    logger.debug("Checking if package %s is installed" % pkg.name)
+    installed = check_package_installed(pkg.name)
+
+    self.switch_pkg_version.set_sensitive(True)
+    self.switch_arco_repo.set_sensitive(True)
+
+    progress_dialog.btn_package_progress_close.set_sensitive(True)
+
+    if installed and action == "install":
+        logger.debug("Toggle switch state = True")
+        switch.set_state(True)
+        switch.set_active(True)
+        switch.set_sensitive(True)
+
+        if progress_dialog.pkg_dialog_closed is False:
+            progress_dialog.set_title("Package install for %s completed" % pkg.name)
+
+            progress_dialog.infobar.set_name("infobar_info")
+
+            content = progress_dialog.infobar.get_content_area()
+            if content is not None:
+                for widget in content.get_children():
+                    content.remove(widget)
+
+                lbl_install = Gtk.Label(xalign=0, yalign=0)
+                lbl_install.set_markup("<b>Package %s installed</b>" % pkg.name)
+
+                content.add(lbl_install)
+
+                if self.timeout_id is not None:
+                    GLib.source_remove(self.timeout_id)
+                    self.timeout_id = None
+
+                self.timeout_id = GLib.timeout_add(
+                    100, reveal_infobar, self, progress_dialog
+                )
+
+    if installed is False and action == "install":
+        logger.debug("Toggle switch state = False")
+        # install failed/terminated
+        switch.set_state(False)
+        switch.set_active(False)
+        switch.set_sensitive(True)
+
+        if progress_dialog.pkg_dialog_closed is False:
+            progress_dialog.set_title("Package install for %s failed" % pkg.name)
+
+            progress_dialog.infobar.set_name("infobar_error")
+
+            content = progress_dialog.infobar.get_content_area()
+            if content is not None:
+                for widget in content.get_children():
+                    content.remove(widget)
+
+                lbl_install = Gtk.Label(xalign=0, yalign=0)
+                lbl_install.set_markup("<b>Package %s install failed</b>" % pkg.name)
+
+                content.add(lbl_install)
+
+                if self.timeout_id is not None:
+                    GLib.source_remove(self.timeout_id)
+                    self.timeout_id = None
+
+                self.timeout_id = GLib.timeout_add(
+                    100, reveal_infobar, self, progress_dialog
+                )
+        else:
+            # the package progress dialog has been closed, but notify user package failed to install
+
+            message_dialog = MessageDialog(
+                "Errors occurred install for %s failed" % pkg.name,
+                "Pacman failed to install package %s\n" % pkg.name,
+                " ".join(process_stdout_lst),
+                "error",
+                True,
+            )
+
+            message_dialog.show_all()
+            message_dialog.run()
+            message_dialog.hide()
+            message_dialog.destroy()
+
+    if installed is False and action == "uninstall":
+        logger.debug("Toggle switch state = False")
+        switch.set_state(False)
+        switch.set_active(False)
+        switch.set_sensitive(True)
+
+        if progress_dialog.pkg_dialog_closed is False:
+            progress_dialog.set_title("Package uninstall for %s completed" % pkg.name)
+            progress_dialog.infobar.set_name("infobar_info")
+            content = progress_dialog.infobar.get_content_area()
+            if content is not None:
+                for widget in content.get_children():
+                    content.remove(widget)
+
+                lbl_install = Gtk.Label(xalign=0, yalign=0)
+                lbl_install.set_markup("<b>Package %s uninstalled</b>" % pkg.name)
+
+                content.add(lbl_install)
+
+                if self.timeout_id is not None:
+                    GLib.source_remove(self.timeout_id)
+                    self.timeout_id = None
+
+                self.timeout_id = GLib.timeout_add(
+                    100, reveal_infobar, self, progress_dialog
+                )
+
+    if installed is True and action == "uninstall":
+        # uninstall failed/terminated
+        switch.set_state(True)
+        switch.set_active(True)
+        switch.set_sensitive(True)
+
+        if progress_dialog.pkg_dialog_closed is False:
+            progress_dialog.set_title("Package uninstall for %s failed" % pkg.name)
+            progress_dialog.infobar.set_name("infobar_error")
+
+            content = progress_dialog.infobar.get_content_area()
+            if content is not None:
+                for widget in content.get_children():
+                    content.remove(widget)
+
+                lbl_install = Gtk.Label(xalign=0, yalign=0)
+                lbl_install.set_markup("<b>Package %s uninstall failed</b>" % pkg.name)
+
+                content.add(lbl_install)
+
+                if self.timeout_id is not None:
+                    GLib.source_remove(self.timeout_id)
+                    self.timeout_id = None
+
+                self.timeout_id = GLib.timeout_add(
+                    100, reveal_infobar, self, progress_dialog
+                )
+
+        else:
+            # the package progress dialog has been closed, but notify user package failed to uninstall
+
+            message_dialog = MessageDialog(
+                "Errors occurred uninstall of %s failed" % pkg.name,
+                "Pacman failed to uninstall package %s\n" % pkg.name,
+                " ".join(process_stdout_lst),
+                "error",
+                True,
+            )
+
+            message_dialog.show_all()
+            message_dialog.run()
+            message_dialog.hide()
+            message_dialog.destroy()
+
+
+# def update_progress_textview(self, line, buffer, textview):
+def update_progress_textview(self, line, progress_dialog):
+    if progress_dialog.pkg_dialog_closed is False and self.in_progress is True:
+        buffer = progress_dialog.package_progress_textview.get_buffer()
+        if len(line) > 0 or buffer is None:
+            buffer.insert(buffer.get_end_iter(), "%s" % line, len("%s" % line))
+
+            text_mark_end = buffer.create_mark("\nend", buffer.get_end_iter(), False)
+
+            progress_dialog.package_progress_textview.scroll_mark_onscreen(
+                text_mark_end
+            )
+    else:
+        line = None
+        return False
 
 
 # =====================================================
 #               APP INSTALLATION
 # =====================================================
 def install(self):
-    pkg, action, widget = self.pkg_queue.get()
-    install_state = {}
-    install_state[pkg] = "QUEUED"
-    thread_alive = False
-    lockfile_thread = "thread_waitForPacmanLockFile"
-
-    # check the pacman lock file thread isn't already running
-    for thread in threading.enumerate():
-        if thread.name == lockfile_thread and thread.is_alive():
-            thread_alive = True
-            break
-
-    if thread_alive == False:
-        print(
-            "[DEBUG] %s Starting waitForPacmanLockFile thread"
-            % datetime.now().strftime("%H:%M:%S")
-        )
-
-        th = Thread(
-            name=lockfile_thread,
-            target=waitForPacmanLockFile,
-        )
-
-        th.start()
-    else:
-        print(
-            "[DEBUG] %s waitForPacmanLockFile thread is already running"
-            % datetime.now().strftime("%H:%M:%S")
-        )
-
-        print(
-            "[INFO] %s Another Package install is in progress"
-            % datetime.now().strftime("%H:%M:%S")
-        )
+    pkg, action, widget, inst_str, progress_dialog = self.pkg_queue.get()
 
     try:
-        print(
-            "[DEBUG] %s PkgInstallThread: Package install queue size : %s"
-            % (datetime.now().strftime("%H:%M:%S"), len(self.pkg_inst_deque))
-        )
+        if action == "install":
+            # path = base_dir + "/cache/installed.lst"
+            logger.debug("Running inside install thread")
+            logger.info("Installing package %s" % pkg.name)
+            logger.debug(inst_str)
 
-        if len(self.pkg_inst_deque) == 5:
-            print(
-                "[WARN] %s Package install queue size hit limit of 5"
-                % (datetime.now().strftime("%H:%M:%S"))
-            )
-            widget.set_state(False)
+            # run pacman process inside a thread
 
-            msg_dialog = message_dialog(
-                self,
-                "Please wait until previous Pacman transactions are completed",
-                "There are a maximum of 5 packages added to the queue",
-                "Waiting for previous Pacman transactions to complete",
-                Gtk.MessageType.WARNING,
-            )
-
-            msg_dialog.run()
-            msg_dialog.hide()
-        else:
-            """
-            Running waitForPacmanLockFile() inside a separate thread
-            will not add further packages to the queue
-            """
-            if action == "install":
-                path = base_dir + "/cache/installed.lst"
-
-                inst_str = ["pacman", "-S", pkg, "--needed", "--noconfirm"]
-
-                now = datetime.now().strftime("%H:%M:%S")
-                print("[INFO] %s Installing package %s " % (now, pkg))
-                create_actions_log(
-                    launchtime, "[INFO] " + now + " Installing package " + pkg + "\n"
-                )
-
-                process_pkg_inst = subprocess.Popen(
+            th_subprocess_install = Thread(
+                name="thread_subprocess",
+                target=start_subprocess,
+                args=(
+                    self,
                     inst_str,
-                    shell=False,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                )
-
-                out, err = process_pkg_inst.communicate(timeout=process_timeout)
-
-                if process_pkg_inst.returncode == 0:
-                    # activate switch widget, install ok
-                    widget.set_state(True)
-
-                    get_current_installed()
-                    install_state[pkg] = "INSTALLED"
-
-                    print(
-                        "[INFO] %s Package install : %s status = completed"
-                        % (datetime.now().strftime("%H:%M:%S"), pkg)
-                    )
-                    print(
-                        "---------------------------------------------------------------------------"
-                    )
-
-                    GLib.idle_add(
-                        show_in_app_notification,
-                        self,
-                        "Package: %s installed" % pkg,
-                        False,
-                    )
-
-                else:
-                    # deactivate switch widget, install failed
-                    widget.set_state(False)
-
-                    get_current_installed()
-                    print(
-                        "[ERROR] %s Package install : %s status = failed"
-                        % (datetime.now().strftime("%H:%M:%S"), pkg)
-                    )
-                    if out:
-                        out = out.decode("utf-8")
-                        install_state[pkg] = out
-                    print(
-                        "---------------------------------------------------------------------------"
-                    )
-                    if (
-                        "error: could not lock database: File exists"
-                        not in install_state[pkg]
-                    ):
-                        GLib.idle_add(
-                            show_in_app_notification,
-                            self,
-                            "Package install failed for: %s" % pkg,
-                            True,
-                        )
-                    raise SystemError("Pacman failed to install package = %s" % pkg)
-    except TimeoutError as t:
-        print("TimeoutError in install(): %s" % t)
-        process_pkg_inst.terminate()
-    except SystemError as s:
-        print("SystemError in install(): %s" % s)
-        process_pkg_inst.terminate()
-    except Exception as e:
-        print("Exception in install(): %s" % e)
-        process_pkg_inst.terminate()
-    finally:
-        # Now check install_state for any packages which failed to install
-        # display dependencies notification to user here
-
-        # remove the package from the deque
-        self.pkg_inst_deque.remove(pkg)
-
-        if (
-            install_state[pkg] != None
-            and install_state[pkg] != "INSTALLED"
-            and install_state[pkg] != "QUEUED"
-            and len(install_state[pkg]) > 0
-        ):
-            print(
-                "[ERROR] %s Package install failed : %s"
-                % (datetime.now().strftime("%H:%M:%S"), install_state[pkg])
+                    progress_dialog,
+                    action,
+                    pkg,
+                    widget,
+                ),
+                daemon=True,
             )
 
-            proc = get_pacman_process()
+            th_subprocess_install.start()
 
-            if proc:
-                print(
-                    "[DEBUG] %s Pacman status = %s"
-                    % (datetime.now().strftime("%H:%M:%S"), str(proc))
-                )
+            logger.debug("Thread: subprocess install started")
 
-                msg_dialog = message_dialog(
-                    self,
-                    "Error installing package",
-                    "Failed to install package: %s" % pkg,
-                    str(install_state[pkg])
-                    + "\n"
-                    + "Pacman process currently running: %s " % proc,
-                    Gtk.MessageType.ERROR,
-                )
-            else:
-                msg_dialog = message_dialog(
-                    self,
-                    "Error installing package",
-                    "Failed to install package: %s" % pkg,
-                    str(install_state[pkg]),
-                    Gtk.MessageType.ERROR,
-                )
-
-            msg_dialog.run()
-            msg_dialog.hide()
-
+    except Exception as e:
+        logger.error("Exception in install(): %s" % e)
+        # deactivate switch widget, install failed
+        widget.set_state(False)
+        self.btn_package_progress_close.set_sensitive(True)
+    finally:
+        # task completed
         self.pkg_queue.task_done()
 
 
@@ -419,155 +547,40 @@ def install(self):
 #               APP UNINSTALLATION
 # =====================================================
 def uninstall(self):
-    pkg, action, widget = self.pkg_queue.get()
-    uninstall_state = {}
-    uninstall_state[pkg] = "QUEUED"
+    pkg, action, widget, uninst_str, progress_dialog = self.pkg_queue.get()
 
     try:
         if action == "uninstall":
-            # peek at the install queue
+            # path = base_dir + "/cache/installed.lst"
+            logger.debug("Running inside uninstall thread")
+            logger.info("Uninstalling package %s" % pkg.name)
+            logger.debug(uninst_str)
 
-            # do not allow a package to be uninstalled while it is being installed
-            if pkg in self.pkg_inst_deque:
-                widget.set_state(True)
-                msg_dialog = message_dialog(
+            # run pacman process inside a thread
+
+            th_subprocess_uninstall = Thread(
+                name="thread_subprocess",
+                target=start_subprocess,
+                args=(
                     self,
-                    "Error removing package",
-                    "Package: %s is installing / queued to be installed" % pkg,
-                    "Cannot remove a package which is installing",
-                    Gtk.MessageType.ERROR,
-                )
-
-                msg_dialog.run()
-                msg_dialog.hide()
-            else:
-                path = base_dir + "/cache/installed.lst"
-                uninst_str = ["pacman", "-Rs", pkg, "--noconfirm"]
-
-                now = datetime.now().strftime("%H:%M:%S")
-                print("[INFO] %s Removing package : %s" % (now, pkg))
-                create_actions_log(
-                    launchtime, "[INFO] " + now + " Removing package " + pkg + "\n"
-                )
-
-                process_pkg_rem = subprocess.Popen(
                     uninst_str,
-                    shell=False,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                )
+                    progress_dialog,
+                    action,
+                    pkg,
+                    widget,
+                ),
+                daemon=True,
+            )
 
-                out, err = process_pkg_rem.communicate(timeout=process_timeout)
+            th_subprocess_uninstall.start()
 
-                if process_pkg_rem.returncode == 0:
-                    # deactivate switch widget, uninstall ok
-                    widget.set_state(False)
+            logger.debug("Thread: subprocess uninstall started")
 
-                    get_current_installed()
-                    uninstall_state[pkg] = "REMOVED"
-                    print(
-                        "[INFO] %s Package removal : %s status = completed"
-                        % (datetime.now().strftime("%H:%M:%S"), pkg)
-                    )
-                    print(
-                        "---------------------------------------------------------------------------"
-                    )
-
-                    GLib.idle_add(
-                        show_in_app_notification,
-                        self,
-                        "Package: %s removed" % pkg,
-                        False,
-                    )
-
-                else:
-                    if out:
-                        out = out.decode("utf-8")
-                        if len(out) > 0:
-                            uninstall_state[pkg] = out.splitlines()
-                            get_current_installed()
-                            if (
-                                "error: target not found: %s" % pkg
-                                in uninstall_state[pkg]
-                            ):
-                                widget.set_state(False)
-                                uninstall_state[pkg] = "REMOVED"
-                                print(
-                                    "[INFO] %s Package removal : %s status = completed"
-                                    % (datetime.now().strftime("%H:%M:%S"), pkg)
-                                )
-                                GLib.idle_add(
-                                    show_in_app_notification,
-                                    self,
-                                    "Package: %s removed" % pkg,
-                                    False,
-                                )
-                            else:
-                                # activate switch widget, uninstall failed
-                                widget.set_state(True)
-
-                                print(
-                                    "[ERROR] %s Package removal : %s status = failed"
-                                    % (datetime.now().strftime("%H:%M:%S"), pkg)
-                                )
-                                if (
-                                    "error: could not lock database: File exists"
-                                    not in uninstall_state[pkg]
-                                ):
-                                    GLib.idle_add(
-                                        show_in_app_notification,
-                                        self,
-                                        "Package removal failed for: %s" % pkg,
-                                        True,
-                                    )
-
-                                raise SystemError(
-                                    "Pacman failed to remove package = %s" % pkg
-                                )
-                        else:
-                            # the package was already removed as a dependency from another package
-                            # deactivate the widget
-                            widget.set_state(False)
-
-                print(
-                    "---------------------------------------------------------------------------"
-                )
-    except TimeoutError as t:
-        print("TimeoutError in install(): %s" % t)
-        process_pkg_rem.terminate()
-    except SystemError as s:
-        print("SystemError in uninstall(): %s" % s)
-        process_pkg_rem.terminate()
     except Exception as e:
-        print("Exception in uninstall(): %s" % e)
-        process_pkg_rem.terminate()
-
+        widget.set_state(True)
+        progress_dialog.btn_package_progress_close.set_sensitive(True)
+        logger.error("Exception in uninstall(): %s" % e)
     finally:
-        # Now check uninstall_state for any packages which failed to uninstall
-        # display dependencies notification to user here
-
-        if (
-            uninstall_state[pkg] != None
-            and len(uninstall_state[pkg]) > 0
-            and uninstall_state[pkg] != "REMOVED"
-            and uninstall_state[pkg] != "QUEUED"
-        ):
-            print(
-                "[ERROR] %s Package uninstall failed : %s"
-                % (datetime.now().strftime("%H:%M:%S"), str(uninstall_state[pkg]))
-            )
-
-            msg_dialog = message_dialog(
-                self,
-                "Error removing package",
-                "Failed to remove package: %s" % pkg,
-                " ".join(uninstall_state[pkg]),
-                Gtk.MessageType.ERROR,
-            )
-
-            msg_dialog.run()
-            msg_dialog.hide()
-
         self.pkg_queue.task_done()
 
 
@@ -577,7 +590,7 @@ def uninstall(self):
 
 
 # store a list of package metadata into memory for fast retrieval
-def storePackages():
+def store_packages():
     path = base_dir + "/yaml/"
     yaml_files = []
     packages = []
@@ -585,6 +598,10 @@ def storePackages():
     category_dict = {}
 
     try:
+        # get latest package version info
+
+        package_metadata = get_all_package_info()
+
         # get a list of yaml files
         for file in os.listdir(path):
             if file.endswith(".yaml"):
@@ -616,6 +633,7 @@ def storePackages():
                         )
                     elif line.startswith("- name:"):
                         # category
+
                         subcat_name = (
                             line.strip("- name: ")
                             .strip()
@@ -630,12 +648,22 @@ def storePackages():
                         # get the package description
                         package_desc = obtain_pkg_description(package_name)
 
+                        # get the package version, lookup dictionary
+
+                        package_version = "Unknown"
+
+                        for i in package_metadata:
+                            if i["name"] == package_name:
+                                package_version = i["version"]
+                                break
+
                         package = Package(
                             package_name,
                             package_desc,
                             category_name,
                             subcat_name,
                             subcat_desc,
+                            package_version,
                         )
 
                         packages.append(package)
@@ -643,21 +671,21 @@ def storePackages():
         # filter the results so that each category holds a list of package
 
         category_name = None
-        packages_cat = []
+        packages_cat_lst = []
         for pkg in packages:
             if category_name == pkg.category:
-                packages_cat.append(pkg)
-                category_dict[category_name] = packages_cat
-            elif category_name == None:
-                packages_cat.append(pkg)
-                category_dict[pkg.category] = packages_cat
+                packages_cat_lst.append(pkg)
+                category_dict[category_name] = packages_cat_lst
+            elif category_name is None:
+                packages_cat_lst.append(pkg)
+                category_dict[pkg.category] = packages_cat_lst
             else:
                 # reset packages, new category
-                packages_cat = []
+                packages_cat_lst = []
 
-                packages_cat.append(pkg)
+                packages_cat_lst.append(pkg)
 
-                category_dict[pkg.category] = packages_cat
+                category_dict[pkg.category] = packages_cat_lst
 
             category_name = pkg.category
 
@@ -683,30 +711,304 @@ def storePackages():
         return sorted_dict
     except Exception as e:
         print("Exception in storePackages() : %s" % e)
-        sys.exit(0)
+        sys.exit(1)
 
 
 # =====================================================
-#               CREATE MESSAGE DIALOG
+#              PACKAGE VERSIONS
 # =====================================================
 
 
-# show the dependencies error here which is stopping the install/uninstall pkg process
-def message_dialog(self, title, first_msg, secondary_msg, msg_type):
-    msg_dialog = Gtk.MessageDialog(
-        self,
-        flags=0,
-        message_type=msg_type,
-        buttons=Gtk.ButtonsType.OK,
-        text="%s" % first_msg,
-    )
+# get live package name, version info and repo name
+def get_all_package_info():
+    query_str = ["pacman", "-Si"]
 
-    msg_dialog.set_title(title)
+    try:
+        process_pkg_query = subprocess.Popen(
+            query_str, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
 
-    if len(secondary_msg) > 0:
-        msg_dialog.format_secondary_markup("%s" % secondary_msg)
+        out, err = process_pkg_query.communicate(timeout=process_timeout)
 
-    return msg_dialog
+        if process_pkg_query.returncode == 0:
+            if out:
+                package_data = []
+                package_name = "Unknown"
+                package_version = "Unknown"
+
+                for line in out.decode("utf-8").splitlines():
+                    package_dict = {}
+                    if "Name            :" in line.strip():
+                        package_name = line.replace(" ", "").split("Name:")[1].strip()
+
+                    if "Version         :" in line.strip():
+                        package_version = (
+                            line.replace(" ", "").split("Version:")[1].strip()
+                        )
+
+                        package_dict["name"] = package_name
+                        package_dict["version"] = package_version
+
+                        package_data.append(package_dict)
+
+                return package_data
+        else:
+            logger.error("Failed to extract package version information.")
+
+    except Exception as e:
+        logger.error("Exception in get_all_package_info() : %s" % e)
+
+
+# get installed package version, installed date, name to be displayed inside PackageListDialog
+
+
+def get_installed_package_data():
+    # to capture the latest package version
+    latest_package_data = get_all_package_info()
+
+    query_str = ["pacman", "-Qi"]
+
+    try:
+        installed_packages_lst = []
+        pkg_name = None
+        pkg_version = None
+        pkg_install_date = None
+        pkg_installed_size = None
+        pkg_latest_version = None
+
+        with subprocess.Popen(
+            query_str,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            for line in process.stdout:
+                if "Name            :" in line.strip():
+                    pkg_name = line.replace(" ", "").split("Name:")[1].strip()
+
+                if "Version         :" in line.strip():
+                    pkg_version = line.replace(" ", "").split("Version:")[1].strip()
+
+                if "Installed Size  :" in line.strip():
+                    pkg_installed_size = line.split("Installed Size  :")[1].strip()
+
+                if "Install Date    :" in line.strip():
+                    pkg_install_date = line.split("Install Date    :")[1].strip()
+
+                    # get the latest version lookup dictionary
+
+                    found = False
+                    pkg_latest_version = None
+
+                    for i in latest_package_data:
+                        if i["name"] == pkg_name:
+                            pkg_latest_version = i["version"]
+                            break
+
+                    installed_packages_lst.append(
+                        (
+                            pkg_name,
+                            pkg_version,
+                            pkg_latest_version,
+                            pkg_installed_size,
+                            pkg_install_date,
+                        )
+                    )
+
+        return installed_packages_lst
+
+    except Exception as e:
+        logger.error("Exception in get_installed_package_data() : %s" % e)
+
+
+# get key package information which is to be shown inside ProgressDialog
+
+
+def get_package_information(package_name):
+    logger.info("Fetching package information for %s" % package_name)
+
+    try:
+        pkg_name = "Unknown"
+        pkg_version = "Unknown"
+        pkg_repository = "Unknown / pacman mirrorlist not configured"
+        pkg_description = "Unknown"
+        pkg_arch = "Unknown"
+        pkg_url = "Unknown"
+        pkg_depends_on = []
+        pkg_conflicts_with = []
+        pkg_download_size = "Unknown"
+        pkg_installed_size = "Unknown"
+        pkg_build_date = "Unknown"
+        pkg_packager = "Unknown"
+        package_metadata = {}
+
+        # if check_package_installed(package_name):
+        #     query_str = ["pacman", "-Qii", package_name]
+        # else:
+        #     query_str = ["pacman", "-Sii", package_name]
+
+        query_local_str = ["pacman", "-Qi", package_name]
+
+        query_remote_str = ["pacman", "-Si", package_name]
+
+        process_query_remote = subprocess.run(
+            query_remote_str,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=process_timeout,
+        )
+
+        # added validation on process result
+        if process_query_remote.returncode == 0:
+            for line in process_query_remote.stdout.decode("utf-8").splitlines():
+                if "Name            :" in line.strip():
+                    pkg_name = line.replace(" ", "").split("Name:")[1].strip()
+
+                if "Version         :" in line.strip():
+                    pkg_version = line.replace(" ", "").split("Version:")[1].strip()
+
+                if "Repository      :" in line.strip():
+                    pkg_repository = line.split("Repository      :")[1].strip()
+
+                if "Description     :" in line.strip():
+                    pkg_description = line.split("Description     :")[1].strip()
+
+                if "Architecture    :" in line.strip():
+                    pkg_arch = line.split("Architecture    :")[1].strip()
+
+                if "URL             :" in line.strip():
+                    pkg_url = line.split("URL             :")[1].strip()
+
+                if "Depends On      :" in line.strip():
+                    if line.split("Depends On      :")[1].strip() != "None":
+                        pkg_depends_on_str = line.split("Depends On      :")[1].strip()
+
+                        for pkg_dep in pkg_depends_on_str.split("  "):
+                            pkg_depends_on.append((pkg_dep, None))
+                    else:
+                        pkg_depends_on = []
+
+                if "Conflicts With  :" in line.strip():
+                    if line.split("Conflicts With  :")[1].strip() != "None":
+                        pkg_conflicts_with_str = line.split("Conflicts With  :")[
+                            1
+                        ].strip()
+
+                        for pkg_con in pkg_conflicts_with_str.split("  "):
+                            pkg_conflicts_with.append((pkg_con, None))
+                    else:
+                        pkg_conflicts_with = []
+
+                if "Download Size   :" in line.strip():
+                    pkg_download_size = line.split("Download Size   :")[1].strip()
+
+                if "Installed Size  :" in line.strip():
+                    pkg_installed_size = line.split("Installed Size  :")[1].strip()
+
+                if "Build Date      :" in line.strip():
+                    pkg_build_date = line.split("Build Date      :")[1].strip()
+
+                if "Packager        :" in line.strip():
+                    pkg_packager = line.split("Packager        :")[1].strip()
+
+            package_metadata["name"] = pkg_name
+            package_metadata["version"] = pkg_version
+            package_metadata["repository"] = pkg_repository
+            package_metadata["description"] = pkg_description
+            package_metadata["arch"] = pkg_arch
+            package_metadata["url"] = pkg_url
+            package_metadata["depends_on"] = pkg_depends_on
+            package_metadata["conflicts_with"] = pkg_conflicts_with
+            package_metadata["download_size"] = pkg_download_size
+            package_metadata["installed_size"] = pkg_installed_size
+            package_metadata["build_date"] = pkg_build_date
+            package_metadata["packager"] = pkg_packager
+
+            return package_metadata
+        else:
+            process_query_local = subprocess.run(
+                query_local_str,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=process_timeout,
+            )
+
+            # added validation on process result
+            if process_query_local.returncode == 0:
+                for line in process_query_local.stdout.decode("utf-8").splitlines():
+                    if "Name            :" in line.strip():
+                        pkg_name = line.replace(" ", "").split("Name:")[1].strip()
+
+                    if "Version         :" in line.strip():
+                        pkg_version = line.replace(" ", "").split("Version:")[1].strip()
+
+                    if "Repository      :" in line.strip():
+                        pkg_repository = line.split("Repository      :")[1].strip()
+
+                    if "Description     :" in line.strip():
+                        pkg_description = line.split("Description     :")[1].strip()
+
+                    if "Architecture    :" in line.strip():
+                        pkg_arch = line.split("Architecture    :")[1].strip()
+
+                    if "URL             :" in line.strip():
+                        pkg_url = line.split("URL             :")[1].strip()
+
+                    if "Depends On      :" in line.strip():
+                        if line.split("Depends On      :")[1].strip() != "None":
+                            pkg_depends_on_str = line.split("Depends On      :")[
+                                1
+                            ].strip()
+
+                            for pkg_dep in pkg_depends_on_str.split("  "):
+                                pkg_depends_on.append((pkg_dep, None))
+                        else:
+                            pkg_depends_on = []
+
+                    if "Conflicts With  :" in line.strip():
+                        if line.split("Conflicts With  :")[1].strip() != "None":
+                            pkg_conflicts_with_str = line.split("Conflicts With  :")[
+                                1
+                            ].strip()
+
+                            for pkg_con in pkg_conflicts_with_str.split("  "):
+                                pkg_conflicts_with.append((pkg_con, None))
+                        else:
+                            pkg_conflicts_with = []
+
+                    if "Download Size   :" in line.strip():
+                        pkg_download_size = line.split("Download Size   :")[1].strip()
+
+                    if "Installed Size  :" in line.strip():
+                        pkg_installed_size = line.split("Installed Size  :")[1].strip()
+
+                    if "Build Date      :" in line.strip():
+                        pkg_build_date = line.split("Build Date      :")[1].strip()
+
+                    if "Packager        :" in line.strip():
+                        pkg_packager = line.split("Packager        :")[1].strip()
+
+                package_metadata["name"] = pkg_name
+                package_metadata["version"] = pkg_version
+                package_metadata["repository"] = pkg_repository
+                package_metadata["description"] = pkg_description
+                package_metadata["arch"] = pkg_arch
+                package_metadata["url"] = pkg_url
+                package_metadata["depends_on"] = pkg_depends_on
+                package_metadata["conflicts_with"] = pkg_conflicts_with
+                package_metadata["download_size"] = pkg_download_size
+                package_metadata["installed_size"] = pkg_installed_size
+                package_metadata["build_date"] = pkg_build_date
+                package_metadata["packager"] = pkg_packager
+
+                return package_metadata
+            else:
+                return str(process_query_local.stdout.decode("utf-8"))
+    except Exception as e:
+        logger.error("Exception in get_package_information(): %e" % e)
 
 
 # =====================================================
@@ -735,10 +1037,7 @@ def get_current_installed():
             file.write(line)
         file.close()
     else:
-        print(
-            "[ERROR] %s Failed to run %s"
-            % (datetime.now().strftime("%H:%M:%S"), query_str)
-        )
+        logger.warning("Failed to run %s" % query_str)
 
 
 def query_pkg(package):
@@ -747,7 +1046,7 @@ def query_pkg(package):
         path = base_dir + "/cache/installed.lst"
 
         if os.path.exists(path):
-            if isfileStale(path, 0, 0, 30):
+            if is_file_stale(path, 0, 0, 30):
                 get_current_installed()
         # file does NOT exist;
         else:
@@ -768,7 +1067,7 @@ def query_pkg(package):
             # file.close()
         return False
     except Exception as e:
-        print("Exception in query_pkg(): %s " % e)
+        logger.error("Exception in query_pkg(): %s " % e)
 
 
 # =====================================================
@@ -781,7 +1080,7 @@ def cache(package, path_dir_cache):
         # first we need to strip the new line escape sequence to ensure we don't get incorrect outcome
         pkg = package.strip()
         # you can see all the errors here with the print command below
-        if debug == True:
+        if debug is True:
             print(pkg)
         # create the query
         query_str = ["pacman", "-Si", pkg, " --noconfirm"]
@@ -795,8 +1094,8 @@ def cache(package, path_dir_cache):
 
         # validate the process result
         if process.returncode == 0:
-            if debug == True:
-                print("Return code: equals 0 " + str(process.returncode))
+            if debug is True:
+                logger.debug("Return code: equals 0 " + str(process.returncode))
             # out, err = process.communicate()
 
             output = out.decode("utf-8")
@@ -820,7 +1119,7 @@ def cache(package, path_dir_cache):
         # There are several packages that do not return a valid process return code
         # Cathing those manually via corrections folder
         if process.returncode != 0:
-            if debug == True:
+            if debug is True:
                 print("Return code: " + str(process.returncode))
             exceptions = [
                 "florence",
@@ -848,7 +1147,7 @@ def cache(package, path_dir_cache):
         return "No Description Found"
 
     except Exception as e:
-        print("Exception in cache(): %s " % e)
+        logger.error("Exception in cache(): %s " % e)
 
 
 # Creating an over-load so that we can use the same function, with slightly different code to get the results we need
@@ -858,14 +1157,12 @@ def cache_btn():
     packages.sort()
     number = 1
     for pkg in packages:
-        print(str(number) + "/" + str(len(packages)) + ": Caching " + pkg)
+        logger.debug(str(number) + "/" + str(len(packages)) + ": Caching " + pkg)
         cache(pkg, path_dir_cache)
         number = number + 1
         # progressbar.timeout_id = GLib.timeout_add(50, progressbar.update, fraction)
 
-    print(
-        "[INFO] Caching applications finished  " + datetime.now().strftime("%H:%M:%S")
-    )
+    logger.debug("Caching applications finished")
 
     # This will need to be coded to be running multiple processes eventually, since it will be manually invoked.
     # process the file list
@@ -914,140 +1211,65 @@ def restart_program():
     os.execl(python, python, *sys.argv)
 
 
-# def check_github(yaml_files):
-#     # This is the link to the location where the .yaml files are kept in the github
-#     # Removing desktop wayland, desktop, drivers, nvidia, ...
-#     path = base_dir + "/cache/"
-#     link = "https://github.com/arcolinux/arcob-calamares-config-awesome/tree/master/calamares/modules/"
-#     urls = []
-#     fns = []
-#     for file in yaml_files:
-#         if isfileStale(path + file, 14, 0, 0):
-#             fns.append(path + file)
-#             urls.append(link + file)
-#     if len(fns) > 0 & len(urls) > 0:
-#         inputs = zip(urls, fns)
-#         download_parallel(inputs)
-
-
-# def download_url(args):
-#     t0 = time.time()
-#     url, fn = args[0], args[1]
-#     try:
-#         r = requests.get(url)
-#         with open(fn, "wb") as f:
-#             f.write(r.content)
-#         return (url, time.time() - t0)
-#     except Exception as e:
-#         print("Exception in download_url():", e)
-
-
-# def download_parallel(args):
-#     cpus = cpu_count()
-#     results = ThreadPool(cpus - 1).imap_unordered(download_url, args)
-#     for result in results:
-#         print("url:", result[0], "time (s):", result[1])
-
-
 # =====================================================
-#               CHECK RUNNING PROCESS
+#               MONITOR PACMAN LOG FILE
 # =====================================================
 
 
-def checkIfProcessRunning(processName):
-    for proc in psutil.process_iter():
-        try:
-            pinfo = proc.as_dict(attrs=["pid", "name", "create_time"])
-            if processName == pinfo["pid"]:
-                return True
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            pass
-    return False
-
-
-# get a number of pacman processes are running
-
-
-# =====================================================
-#               CHECK PACMAN LOCK FILE
-# =====================================================
-
-
-def waitForPacmanLockFile():
-    start = int(time.time())
-
+# write lines from the pacman log onto a queue, this is called from a non-blocking thread
+def add_pacmanlog_queue(self):
     try:
-        while True:
-            if os.path.exists(pacman_lock_file):
-                time.sleep(5)
-
-                elapsed = int(time.time()) + 5
-
-                print(
-                    "[DEBUG] %s Pacman is busy.. elapsed duration: %ss"
-                    % (datetime.now().strftime("%H:%M:%S"), (elapsed - start))
-                )
-
-                proc = get_pacman_process()
-
-                if proc:
-                    print(
-                        "[DEBUG] %s Pacman process: %s"
-                        % (datetime.now().strftime("%H:%M:%S"), str(proc))
-                    )
+        lines = []
+        with open(pacman_logfile, "r") as f:
+            while True:
+                line = f.readline()
+                if line:
+                    lines.append(line)
+                    self.pacmanlog_queue.put(lines)
                 else:
-                    print(
-                        "[DEBUG] %s Process completed, Pacman is ready"
-                        % datetime.now().strftime("%H:%M:%S")
-                    )
-                    return
+                    time.sleep(0.5)
 
-                if (elapsed - start) >= process_timeout:
-                    print(
-                        "[WARN] %s Waiting for previous Pacman transaction to complete timed out after %ss"
-                        % (datetime.now().strftime("%H:%M:%S"), process_timeout)
-                    )
-                    return
-            else:
-                print(
-                    "[DEBUG] %s Pacman is ready" % datetime.now().strftime("%H:%M:%S")
-                )
-                return
     except Exception as e:
-        print("Exception in waitForPacmanLockFile(): %s " % e)
+        logger.error("Exception in add_pacmanlog_queue() : %s" % e)
+    finally:
+        logger.debug("No new lines found inside the pacman log file")
 
 
-# this gets info on the pacman process currently running
-def get_pacman_process():
+# update the textview called from a non-blocking thread
+def start_log_timer(self, window_pacmanlog):
+    while True:
+        if window_pacmanlog.start_logtimer is False:
+            logger.debug("Stopping Pacman log monitoring timer")
+            return False
+
+        GLib.idle_add(update_textview_pacmanlog, self, priority=GLib.PRIORITY_DEFAULT)
+        time.sleep(2)
+
+
+# update the textview component with new lines from the pacman log file
+def update_textview_pacmanlog(self):
+    lines = self.pacmanlog_queue.get()
+
     try:
-        for proc in psutil.process_iter():
-            try:
-                pinfo = proc.as_dict(attrs=["pid", "name", "create_time"])
-                if pinfo["name"] == "pacman":
-                    return " ".join(proc.cmdline())
+        buffer = self.textbuffer_pacmanlog
+        if len(lines) > 0:
+            end_iter = buffer.get_end_iter()
 
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
+            for line in lines:
+                buffer.insert(end_iter, "  %s" % line, len("  %s" % line))
+
     except Exception as e:
-        print("Exception in get_pacman_process() : %s" % e)
+        logger.error("Exception in update_textview_pacmanlog() : %s" % e)
+    finally:
+        self.pacmanlog_queue.task_done()
 
+        if len(lines) > 0:
+            text_mark_end = buffer.create_mark("end", buffer.get_end_iter(), False)
+            # auto-scroll the textview to the bottom as new content is added
 
-# =====================================================
-#               MESSAGEBOX
-# =====================================================
+            self.textview_pacmanlog.scroll_mark_onscreen(text_mark_end)
 
-
-def messageBox(self, title, message):
-    md2 = Gtk.MessageDialog(
-        parent=self,
-        flags=0,
-        message_type=Gtk.MessageType.INFO,
-        buttons=Gtk.ButtonsType.OK,
-        text=message,
-    )
-    md2.format_secondary_markup(message)
-    md2.run()
-    md2.destroy()
+        lines.clear()
 
 
 # =====================================================
@@ -1057,13 +1279,7 @@ def messageBox(self, title, message):
 
 def search(self, term):
     try:
-        print(
-            '[INFO] %s Searching for: "%s"'
-            % (
-                datetime.now().strftime("%H:%M:%S"),
-                term,
-            )
-        )
+        logger.info('Searching for: "%s"' % term)
 
         pkg_matches = []
 
@@ -1104,7 +1320,7 @@ def search(self, term):
             if category_name == pkg_match.category:
                 packages_cat.append(pkg_match)
                 category_dict[category_name] = packages_cat
-            elif category_name == None:
+            elif category_name is None:
                 packages_cat.append(pkg_match)
                 category_dict[pkg_match.category] = packages_cat
             else:
@@ -1116,19 +1332,6 @@ def search(self, term):
                 category_dict[pkg_match.category] = packages_cat
 
             category_name = pkg_match.category
-
-        if len(category_dict) == 0:
-            self.search_queue.put(None)
-            msg_dialog = message_dialog(
-                self,
-                "Find Package",
-                '"%s" was not found in the available sources' % term,
-                "Please try another search query",
-                Gtk.MessageType.ERROR,
-            )
-
-            msg_dialog.run()
-            msg_dialog.hide()
 
         # debug console output to display package info
         """
@@ -1154,10 +1357,12 @@ def search(self, term):
                 sorted_dict,
             )
         else:
-            return
+            self.search_queue.put(
+                None,
+            )
 
     except Exception as e:
-        print("Exception in search(): %s", e)
+        logger.error("Exception in search(): %s", e)
 
 
 # =====================================================
@@ -1171,8 +1376,8 @@ def append_repo(text):
         with open(pacman_conf, "a", encoding="utf-8") as f:
             f.write("\n\n")
             f.write(text)
-    except Exception as error:
-        print(error)
+    except Exception as e:
+        logger.error("Exception in append_repo(): %s" % e)
 
 
 def repo_exist(value):
@@ -1187,80 +1392,438 @@ def repo_exist(value):
     return False
 
 
-# install ArcoLinux mirrorlist and key package
-def install_arcolinux_key_mirror(self):
-    base_dir = os.path.dirname(os.path.realpath(__file__))
-    pathway = base_dir + "/packages/arcolinux-keyring/"
-    file = os.listdir(pathway)
+# install ArcoLinux mirror
 
+
+def setup_arcolinux_config(self, action, config):
     try:
-        install = "pacman -U " + pathway + str(file).strip("[]'") + " --noconfirm"
-        print("[INFO] : " + install)
-        subprocess.call(
-            install.split(" "),
-            shell=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        print("[INFO] : ArcoLinux keyring is now installed")
-    except Exception as error:
-        print(error)
+        mirrorlist = base_dir + "/packages/arcolinux-mirrorlist/"
+        keyring = base_dir + "/packages/arcolinux-keyring/"
 
-    pathway = base_dir + "/packages/arcolinux-mirrorlist/"
-    file = os.listdir(pathway)
-    try:
-        install = "pacman -U " + pathway + str(file).strip("[]'") + " --noconfirm"
-        print("[INFO] : " + install)
-        subprocess.call(
-            install.split(" "),
-            shell=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        print("[INFO] : ArcoLinux mirrorlist is now installed")
-    except Exception as error:
-        print(error)
+        cmd_str = None
+        message = None
 
+        if action == "install" and config == "mirrorlist":
+            file = os.listdir(mirrorlist)
+            cmd_str = [
+                "pacman",
+                "-U",
+                mirrorlist + str(file).strip("[]'"),
+                "--noconfirm",
+            ]
+            logger.info("Installing ArcoLinux mirrorlist")
 
-# remove ArcoLinux mirrorlist and key package
-def remove_arcolinux_key_mirror(self):
-    try:
-        command = "pacman -Rdd arcolinux-keyring --noconfirm"
-        print("[INFO] : " + command)
-        subprocess.call(
-            command.split(" "),
-            shell=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        print("[INFO] : ArcoLinux keyring is now removed")
-    except Exception as error:
-        print(error)
+            logger.debug("%s" % " ".join(cmd_str))
 
-    try:
-        command = "pacman -Rdd arcolinux-mirrorlist-git --noconfirm"
-        print("[INFO] : " + command)
-        subprocess.call(
-            command.split(" "),
-            shell=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        print("[INFO] : ArcoLinux mirrorlist is now removed")
-    except Exception as error:
-        print(error)
+        if action == "remove" and config == "mirrorlist":
+            file = os.listdir(keyring)
+            cmd_str = ["pacman", "-Rdd", "arcolinux-mirrorlist-git", "--noconfirm"]
+            logger.info("Removing ArcoLinux mirrorlist")
+
+            logger.debug("%s" % " ".join(cmd_str))
+
+        if action == "install" and config == "keyring":
+            file = os.listdir(keyring)
+            cmd_str = [
+                "pacman",
+                "-U",
+                keyring + str(file).strip("[]'"),
+                "--noconfirm",
+            ]
+
+            logger.debug("%s" % " ".join(cmd_str))
+
+        if action == "remove" and config == "keyring":
+            file = os.listdir(keyring)
+            cmd_str = ["pacman", "-Rdd", "arcolinux-keyring", "--noconfirm"]
+            logger.info("Removing ArcoLinux mirrorlist")
+
+            logger.debug("%s" % " ".join(cmd_str))
+
+        if cmd_str is not None:
+            with subprocess.Popen(
+                cmd_str,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                universal_newlines=True,
+            ) as process:
+                process.wait(process_timeout)
+
+                output = []
+
+                for line in process.stdout:
+                    output.append(line)
+
+                if process.returncode == 0:
+                    return 0
+
+                else:
+                    if len(output) == 0:
+                        output.append("Error: %s %s failed" % (config, action))
+
+                    logger.error(" ".join(output))
+
+                    result_err = {}
+
+                    result_err["cmd_str"] = cmd_str
+                    result_err["output"] = output
+
+                    return result_err
+
+    except Exception as e:
+        logger.error("Exception in setup_arcolinux_config(): %s" % e)
 
 
 def add_repos():
-    """add the ArcoLinux repos in /etc/pacman.conf"""
+    # add ArcoLinux repos in /etc/pacman.conf
+    # if distr == "arcolinux":
+    logger.info("Adding ArcoLinux repos on %s" % distr)
+    try:
+        # take backup of existing pacman.conf file
+        if os.path.exists(pacman_conf):
+            shutil.copy(pacman_conf, pacman_conf_backup)
+
+            # read existing contents from pacman.conf file
+
+            logger.debug("Reading from %s" % pacman_conf)
+
+            lines = []
+
+            with open(pacman_conf, "r", encoding="utf-8") as r:
+                lines = r.readlines()
+
+            # check for existing ArcoLinux entries
+            if len(lines) > 0:
+                index = None
+                # add arco repo testing line just below the default arch #[testing] or #[core-testing] entries
+                if "#[arcolinux_repo_testing]\n" not in lines:
+                    i = 0
+
+                    for x in arco_test_repo:
+                        if i == 0:
+                            lines.append("\n%s\n" % x)
+                        else:
+                            lines.append("%s\n" % x)
+                        i += 1
+
+                if "[arcolinux_repo]\n" not in lines:
+                    i = 0
+                    for x in arco_repo:
+                        if i == 0:
+                            # add new line only at the start of the very first line
+                            lines.append("\n%s\n" % x)
+                        else:
+                            lines.append("%s\n" % x)
+
+                        i += 1
+
+                if "[arcolinux_repo_3party]\n" not in lines:
+                    i = 0
+                    for x in arco_3rd_party_repo:
+                        if i == 0:
+                            # add new line only at the start of the very first line
+                            lines.append("\n%s\n" % x)
+                        else:
+                            lines.append("%s\n" % x)
+
+                        i += 1
+
+                if "[arcolinux_repo_xlarge]\n" not in lines:
+                    i = 0
+                    for x in arco_xlrepo:
+                        if i == 0:
+                            # add new line only at the start of the very first line
+                            lines.append("\n%s\n" % x)
+                        else:
+                            lines.append("%s\n" % x)
+
+                        i += 1
+
+                logger.debug("[Add repos] Writing to %s" % pacman_conf)
+
+                if len(lines) > 0:
+                    with open(pacman_conf, "w", encoding="utf-8") as w:
+                        w.writelines(lines)
+
+                        w.flush()
+
+                    return 0
+
+                else:
+                    logger.error("Failed to process %s" % pacman_conf)
+
+            else:
+                logger.error("Failed to read %s" % pacman_conf)
+
+    except Exception as e:
+        logger.error("Exception in add_repos(): %s" % e)
+        return e
+
+
+def remove_repos():
+    # remove the ArcoLinux repos in /etc/pacman.conf
+    try:
+        if os.path.exists(pacman_conf):
+            shutil.copy(pacman_conf, pacman_conf_backup)
+
+            logger.debug("Reading from %s" % pacman_conf)
+
+            lines = []
+
+            with open(pacman_conf, "r", encoding="utf-8") as r:
+                lines = r.readlines()
+
+            # check for existing ArcoLinux entries and remove
+
+            if len(lines) > 0:
+                for arco_test_repo_line in arco_test_repo:
+                    if (
+                        "%s\n" % arco_test_repo_line in lines
+                        and len(arco_test_repo_line) > 0
+                    ):
+                        lines.remove("%s\n" % arco_test_repo_line)
+
+                for arco_repo_line in arco_repo:
+                    if "%s\n" % arco_repo_line in lines and len(arco_repo_line) > 0:
+                        lines.remove("%s\n" % arco_repo_line)
+
+                for arco_3rd_party_repo_line in arco_3rd_party_repo:
+                    if (
+                        "%s\n" % arco_3rd_party_repo_line in lines
+                        and len(arco_3rd_party_repo_line) > 0
+                    ):
+                        lines.remove("%s\n" % arco_3rd_party_repo_line)
+
+                for arco_xlrepo_line in arco_xlrepo:
+                    if "%s\n" % arco_xlrepo_line in lines and len(arco_xlrepo_line) > 0:
+                        lines.remove("%s\n" % arco_xlrepo_line)
+
+                # for i in range(1, 4):
+                #     lines[-i] = lines[-i].strip()
+
+                logger.debug("[Remove Repos] Writing to %s" % pacman_conf)
+
+                if len(lines) > 0:
+                    with open(pacman_conf, "w", encoding="utf-8") as w:
+                        w.writelines(lines)
+
+                        w.flush()
+
+                    return 0
+
+                else:
+                    logger.error("Failed to process %s" % pacman_conf)
+
+            else:
+                logger.error("Failed to read %s" % pacman_conf)
+
+    except Exception as e:
+        logger.error("Exception in remove_repos(): %s" % e)
+        return e
+
+
+# =====================================================
+#               CHECK IF PACKAGE IS INSTALLED
+# =====================================================
+
+
+# check if package is installed or not
+def check_package_installed(package):
+    query_str = ["pacman", "-Qi", package]
+    try:
+        process_pkg_installed = subprocess.run(
+            query_str,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=process_timeout,
+        )
+        # package is installed
+        if process_pkg_installed.returncode == 0:
+            return True
+        else:
+            return False
+    except subprocess.CalledProcessError:
+        # package is not installed
+        return False
+
+
+# =====================================================
+#               CHECK RUNNING PROCESS
+# =====================================================
+
+
+def check_if_process_running(process_name):
+    for proc in psutil.process_iter():
+        try:
+            pinfo = proc.as_dict(attrs=["pid", "name", "create_time"])
+            if process_name == pinfo["pid"]:
+                return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return False
+
+
+# =====================================================
+#               NOTIFICATIONS
+# =====================================================
+
+
+def show_in_app_notification(self, message, err):
+    if self.timeout_id is not None:
+        GLib.source_remove(self.timeout_id)
+        self.timeout_id = None
+
+    if err is True:
+        self.notification_label.set_markup(
+            '<span background="yellow" foreground="black">' + message + "</span>"
+        )
+    else:
+        self.notification_label.set_markup(
+            '<span foreground="white">' + message + "</span>"
+        )
+    self.notification_revealer.set_reveal_child(True)
+    self.timeout_id = GLib.timeout_add(3000, timeout, self)
+
+
+def timeout(self):
+    close_in_app_notification(self)
+
+
+def close_in_app_notification(self):
+    self.notification_revealer.set_reveal_child(False)
+    GLib.source_remove(self.timeout_id)
+    self.timeout_id = None
+
+
+def reveal_infobar(self, progress_dialog):
+    progress_dialog.infobar.set_revealed(True)
+    progress_dialog.infobar.show_all()
+    GLib.source_remove(self.timeout_id)
+    self.timeout_id = None
+
+
+"""
+    Since the app could be quit/terminated at any time during a pacman transaction.
+    The pacman process spawned by the install/uninstall threads, needs to be terminated too.
+    Otherwise the app may hang waiting for pacman to complete its transaction.
+"""
+# =====================================================
+#              PACMAN
+# =====================================================
+
+
+def terminate_pacman():
+    try:
+        process_found = False
+        for proc in psutil.process_iter():
+            try:
+                pinfo = proc.as_dict(attrs=["pid", "name", "create_time"])
+                if pinfo["name"] == "pacman":
+                    process_found = True
+                    logger.debug("Killing pacman process = %s" % pinfo["name"])
+
+                    proc.kill()
+
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        if process_found is True:
+            check_pacman_lockfile()
+            os.unlink(pacman_lockfile)
+    except Exception as e:
+        logger.error("Exception in terminate_pacman() : %s" % e)
+
+
+def is_thread_alive(thread_name):
+    for thread in threading.enumerate():
+        if thread.name == thread_name and thread.is_alive():
+            return True
+
+    return False
+
+
+# check if pacman lock file exists
+def check_pacman_lockfile():
+    try:
+        if os.path.exists(pacman_lockfile):
+            logger.warning("Pacman lockfile found inside %s" % pacman_lockfile)
+            logger.warning("Another pacman process is running")
+            return True
+        else:
+            logger.info("No pacman lockfile found, OK to proceed")
+            return False
+    except Exception as e:
+        logger.error("Exception in check_pacman_lockfile() : %s" % e)
+
+
+# this gets info on the pacman process currently running
+def get_pacman_process():
+    try:
+        for proc in psutil.process_iter():
+            try:
+                pinfo = proc.as_dict(attrs=["pid", "name", "create_time"])
+                if pinfo["name"] == "pacman":
+                    return " ".join(proc.cmdline())
+
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+    except Exception as e:
+        logger.error("Exception in get_pacman_process() : %s" % e)
+
+
+# ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!
+
+
+# =====================================================
+#              UNUSED/OLD CODE
+# =====================================================
+"""
+def waitForPacmanLockFile():
+    start = int(time.time())
+
+    try:
+        while True:
+            if check_pacman_lockfile():
+                time.sleep(2)
+
+                elapsed = int(time.time()) + 2
+
+                logger.debug("Pacman status = Busy | Elapsed duration = %ss")
+
+                proc = get_pacman_process()
+
+                if proc:
+                    logger.debug("Pacman process running: %s" % proc)
+
+                else:
+                    logger.debug("Process completed, Pacman status = Ready")
+                    return
+
+                if (elapsed - start) >= process_timeout:
+                    logger.warning(
+                        "Waiting for previous Pacman transaction to complete timed out after %ss"
+                        % process_timeout
+                    )
+
+                    return
+            else:
+                logger.debug("Pacman status = Ready")
+                return
+    except Exception as e:
+        logger.error("Exception in waitForPacmanLockFile(): %s " % e)
+
+def add_repos():
+    # add the ArcoLinux repos in /etc/pacman.conf
     if distr == "arcolinux":
-        print("[INFO] : Adding ArcoLinux repos on ArcoLinux")
+        logger.info("Adding ArcoLinux repos on ArcoLinux")
         try:
             with open(pacman_conf, "r", encoding="utf-8") as f:
                 lines = f.readlines()
                 f.close()
-        except Exception as error:
-            print(error)
+        except Exception as e:
+            logger.error("Exception in add_repos(): %s" % e)
 
         text = "\n\n" + atestrepo + "\n\n" + arepo + "\n\n" + a3prepo + "\n\n" + axlrepo
 
@@ -1268,29 +1831,29 @@ def add_repos():
         lines.insert(pos - 2, text)
 
         try:
-            with open(pacman_conf, "w", encoding="utf-8") as f:
+            pacman_conf_test = "/tmp/pacman.conf"
+            with open(pacman_conf_test, "w", encoding="utf-8") as f:
                 f.writelines(lines)
-        except Exception as error:
-            print(error)
+        except Exception as e:
+            logger.error("Exception in add_repos(): %s" % e)
     else:
         if not repo_exist("[arcolinux_repo_testing]"):
-            print("[INFO] : Adding ArcoLinux test repo (not used)")
+            logger.info("Adding ArcoLinux test repo (not used)")
             append_repo(atestrepo)
         if not repo_exist("[arcolinux_repo]"):
-            print("[INFO] : Adding ArcoLinux repo")
+            logger.info("Adding ArcoLinux repo")
             append_repo(arepo)
         if not repo_exist("[arcolinux_repo_3party]"):
-            print("[INFO] : Adding ArcoLinux 3th party repo")
+            logger.info("Adding ArcoLinux 3th party repo")
             append_repo(a3prepo)
         if not repo_exist("[arcolinux_repo_xlarge]"):
-            print("[INFO] : Adding ArcoLinux XL repo")
+            logger.info("Adding ArcoLinux XL repo")
             append_repo(axlrepo)
         if repo_exist("[arcolinux_repo]"):
-            print("[INFO] : ArcoLinux repos have been installed")
-
+            logger.info("ArcoLinux repos have been installed")
 
 def remove_repos():
-    """remove the ArcoLinux repos in /etc/pacman.conf"""
+    #remove the ArcoLinux repos in /etc/pacman.conf
     try:
         with open(pacman_conf, "r", encoding="utf-8") as f:
             lines = f.readlines()
@@ -1327,86 +1890,68 @@ def remove_repos():
             f.writelines(lines)
             f.close()
 
-    except Exception as error:
-        print(error)
-
-
-# =====================================================
-#               CHECK IF PACKAGE IS INSTALLED
-# =====================================================
-
-
-# check if package is installed or not
-def check_package_installed(package):
-    try:
-        subprocess.check_output(
-            "pacman -Qi " + package, shell=True, stderr=subprocess.STDOUT
-        )
-        # package is installed
-        return True
-    except subprocess.CalledProcessError:
-        # package is not installed
-        return False
-
-
-# =====================================================
-#               NOTIFICATIONS
-# =====================================================
-
-
-def show_in_app_notification(self, message, err):
-    if self.timeout_id is not None:
-        GLib.source_remove(self.timeout_id)
-        self.timeout_id = None
-
-    if err == True:
-        self.notification_label.set_markup(
-            '<span background="yellow" foreground="black">' + message + "</span>"
-        )
-    else:
-        self.notification_label.set_markup(
-            '<span foreground="white">' + message + "</span>"
-        )
-    self.notification_revealer.set_reveal_child(True)
-    self.timeout_id = GLib.timeout_add(3000, timeOut, self)
-
-
-def timeOut(self):
-    close_in_app_notification(self)
-
-
-def close_in_app_notification(self):
-    self.notification_revealer.set_reveal_child(False)
-    GLib.source_remove(self.timeout_id)
-    self.timeout_id = None
-
-
-# =====================================================
-#               KILL PACMAN PROCESS
-# =====================================================
-
-"""
-    Since the app could be quit, killed during a pacman transaction.
-    The pacman process spawned by the install/uninstall threads, needs to be terminated too.
-    Otherwise the app will hang waiting for pacman to complete its transaction.
-"""
-
-
-def terminate_pacman():
-    try:
-        for proc in psutil.process_iter():
-            try:
-                pinfo = proc.as_dict(attrs=["pid", "name", "create_time"])
-                if pinfo["name"] == "pacman":
-                    proc.kill()
-
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
-
-        if os.path.exists(pacman_lock_file):
-            os.unlink(pacman_lock_file)
     except Exception as e:
-        print("Exception in terminate_pacman() : %s" % e)
+        logger.error("Exception in remove_repos(): %s" % e)
+
+# get position in list
+def get_position(lists, value):
+    data = [string for string in lists if value in string]
+    if len(data) != 0:
+        position = lists.index(data[0])
+        return position
+    return 0
+
+def check_github(yaml_files):
+    # This is the link to the location where the .yaml files are kept in the github
+    # Removing desktop wayland, desktop, drivers, nvidia, ...
+    path = base_dir + "/cache/"
+    link = "https://github.com/arcolinux/arcob-calamares-config-awesome/tree/master/calamares/modules/"
+    urls = []
+    fns = []
+    for file in yaml_files:
+        if isfileStale(path + file, 14, 0, 0):
+            fns.append(path + file)
+            urls.append(link + file)
+    if len(fns) > 0 & len(urls) > 0:
+        inputs = zip(urls, fns)
+        download_parallel(inputs)
+
+def download_url(args):
+    t0 = time.time()
+    url, fn = args[0], args[1]
+    try:
+        r = requests.get(url)
+        with open(fn, "wb") as f:
+            f.write(r.content)
+        return (url, time.time() - t0)
+    except Exception as e:
+        print("Exception in download_url():", e)
 
 
-#######ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!
+def download_parallel(args):
+    cpus = cpu_count()
+    results = ThreadPool(cpus - 1).imap_unordered(download_url, args)
+    for result in results:
+        print("url:", result[0], "time (s):", result[1])
+
+def messageBox(self, title, message):
+    md2 = Gtk.MessageDialog(
+        parent=self,
+        flags=0,
+        message_type=Gtk.MessageType.WARNING,
+        buttons=Gtk.ButtonsType.OK,
+        text=title,
+    )
+    md2.format_secondary_markup(message)
+
+    md2.show_all()
+    md2.run()
+    md2.hide()
+    md2.destroy()
+
+# for debugging print number of threads running
+def print_threads_alive():
+    for thread in threading.enumerate():
+        if thread.is_alive():
+            logger.debug("Thread alive = %s" % thread.name)
+"""
