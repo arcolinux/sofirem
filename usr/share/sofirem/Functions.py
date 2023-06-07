@@ -199,7 +199,7 @@ def permissions(dst):
 def sync_package_db():
     try:
         sync_str = ["pacman", "-Sy"]
-        logger.info("Synchronising pacman package databases")
+        logger.info("Synchronizing pacman package databases")
         process_sync = subprocess.run(
             sync_str,
             shell=False,
@@ -238,11 +238,11 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
             bufsize=1,
             universal_newlines=True,
         ) as process:
-            progress_dialog.pkg_dialog_closed = False
+            if self.show_progress_dialog is True:
+                progress_dialog.pkg_dialog_closed = False
+            else:
+                progress_dialog.pkg_dialog_closed = True
             self.in_progress = True
-            widget.set_sensitive(False)
-            self.switch_pkg_version.set_sensitive(False)
-            self.switch_arco_repo.set_sensitive(False)
 
             line = (
                 "Pacman is processing the %s of package %s \n\n  Command running = %s\n\n"
@@ -313,7 +313,8 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
         process.terminate()
         progress_dialog.btn_package_progress_close.set_sensitive(True)
         self.switch_pkg_version.set_sensitive(True)
-        self.switch_arco_repo.set_sensitive(True)
+        self.switch_arco_keyring.set_sensitive(True)
+        self.switch_arco_mirrorlist.set_sensitive(True)
         # deactivate switch widget, install failed
 
     except SystemError as s:
@@ -321,7 +322,8 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
         process.terminate()
         progress_dialog.btn_package_progress_close.set_sensitive(True)
         self.switch_pkg_version.set_sensitive(True)
-        self.switch_arco_repo.set_sensitive(True)
+        self.switch_arco_keyring.set_sensitive(True)
+        self.switch_arco_mirrorlist.set_sensitive(True)
         # deactivate switch widget, install failed
 
 
@@ -333,7 +335,8 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
     installed = check_package_installed(pkg.name)
 
     self.switch_pkg_version.set_sensitive(True)
-    self.switch_arco_repo.set_sensitive(True)
+    self.switch_arco_keyring.set_sensitive(True)
+    self.switch_arco_mirrorlist.set_sensitive(True)
 
     progress_dialog.btn_package_progress_close.set_sensitive(True)
 
@@ -399,6 +402,7 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
             # the package progress dialog has been closed, but notify user package failed to install
 
             message_dialog = MessageDialog(
+                "Errors occurred during install",
                 "Errors occurred install for %s failed" % pkg.name,
                 "Pacman failed to install package %s\n" % pkg.name,
                 " ".join(process_stdout_lst),
@@ -409,7 +413,6 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
             message_dialog.show_all()
             message_dialog.run()
             message_dialog.hide()
-            message_dialog.destroy()
 
     if installed is False and action == "uninstall":
         logger.debug("Toggle switch state = False")
@@ -470,6 +473,7 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
             # the package progress dialog has been closed, but notify user package failed to uninstall
 
             message_dialog = MessageDialog(
+                "Errors occurred during uninstall",
                 "Errors occurred uninstall of %s failed" % pkg.name,
                 "Pacman failed to uninstall package %s\n" % pkg.name,
                 " ".join(process_stdout_lst),
@@ -480,10 +484,11 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
             message_dialog.show_all()
             message_dialog.run()
             message_dialog.hide()
-            message_dialog.destroy()
 
 
-# def update_progress_textview(self, line, buffer, textview):
+# update progress textview using stdout from the pacman process running
+
+
 def update_progress_textview(self, line, progress_dialog):
     if progress_dialog.pkg_dialog_closed is False and self.in_progress is True:
         buffer = progress_dialog.package_progress_textview.get_buffer()
@@ -492,10 +497,12 @@ def update_progress_textview(self, line, progress_dialog):
 
             text_mark_end = buffer.create_mark("\nend", buffer.get_end_iter(), False)
 
+            # scroll to the end of the textview
             progress_dialog.package_progress_textview.scroll_mark_onscreen(
                 text_mark_end
             )
     else:
+        # dialog window is closed
         line = None
         return False
 
@@ -1392,235 +1399,542 @@ def repo_exist(value):
     return False
 
 
-# install ArcoLinux mirror
+def install_arco_keyring():
+    try:
+        keyring = base_dir + "/packages/arcolinux-keyring/"
+        file = os.listdir(keyring)
+        cmd_str = [
+            "pacman",
+            "-U",
+            keyring + str(file).strip("[]'"),
+            "--noconfirm",
+        ]
+
+        logger.debug("%s" % " ".join(cmd_str))
+
+        with subprocess.Popen(
+            cmd_str,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            process.wait(process_timeout)
+
+            output = []
+
+            for line in process.stdout:
+                output.append(line)
+
+            if process.returncode == 0:
+                return 0
+
+            else:
+                if len(output) == 0:
+                    output.append("Error: install of ArcoLinux keyring failed")
+
+                logger.error(" ".join(output))
+
+                result_err = {}
+
+                result_err["cmd_str"] = cmd_str
+                result_err["output"] = output
+
+                return result_err
+    except Exception as e:
+        logger.error("Exception in install_arco_keyring(): %s" % e)
+        result_err = {}
+
+        result_err["cmd_str"] = cmd_str
+        result_err["output"] = e
+
+        return result_err
 
 
-def setup_arcolinux_config(self, action, config):
+def remove_arco_keyring():
+    try:
+        cmd_str = ["pacman", "-Rdd", "arcolinux-keyring", "--noconfirm"]
+        with subprocess.Popen(
+            cmd_str,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            process.wait(process_timeout)
+
+            output = []
+
+            for line in process.stdout:
+                output.append(line)
+
+            if process.returncode == 0:
+                return 0
+
+            else:
+                if len(output) == 0:
+                    output.append("Error: removal of ArcoLinux keyring failed")
+
+                logger.error(" ".join(output))
+
+                result_err = {}
+
+                result_err["cmd_str"] = cmd_str
+                result_err["output"] = output
+
+                return result_err
+
+    except Exception as e:
+        logger.error("Exception in remove_arco_keyring(): %s" % e)
+
+        result_err = {}
+
+        result_err["cmd_str"] = cmd_str
+        result_err["output"] = e
+
+        return result_err
+
+
+def install_arco_mirrorlist():
     try:
         mirrorlist = base_dir + "/packages/arcolinux-mirrorlist/"
-        keyring = base_dir + "/packages/arcolinux-keyring/"
+        file = os.listdir(mirrorlist)
+        cmd_str = [
+            "pacman",
+            "-U",
+            mirrorlist + str(file).strip("[]'"),
+            "--noconfirm",
+        ]
 
-        cmd_str = None
-        message = None
+        logger.debug("%s" % " ".join(cmd_str))
+        with subprocess.Popen(
+            cmd_str,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            process.wait(process_timeout)
 
-        if action == "install" and config == "mirrorlist":
-            file = os.listdir(mirrorlist)
-            cmd_str = [
-                "pacman",
-                "-U",
-                mirrorlist + str(file).strip("[]'"),
-                "--noconfirm",
-            ]
-            logger.info("Installing ArcoLinux mirrorlist")
+            output = []
 
-            logger.debug("%s" % " ".join(cmd_str))
+            for line in process.stdout:
+                output.append(line)
 
-        if action == "remove" and config == "mirrorlist":
-            file = os.listdir(keyring)
-            cmd_str = ["pacman", "-Rdd", "arcolinux-mirrorlist-git", "--noconfirm"]
-            logger.info("Removing ArcoLinux mirrorlist")
+            if process.returncode == 0:
+                return 0
 
-            logger.debug("%s" % " ".join(cmd_str))
+            else:
+                if len(output) == 0:
+                    output.append("Error: install of ArcoLinux mirrorlist failed")
 
-        if action == "install" and config == "keyring":
-            file = os.listdir(keyring)
-            cmd_str = [
-                "pacman",
-                "-U",
-                keyring + str(file).strip("[]'"),
-                "--noconfirm",
-            ]
+                logger.error(" ".join(output))
 
-            logger.debug("%s" % " ".join(cmd_str))
+                result_err = {}
 
-        if action == "remove" and config == "keyring":
-            file = os.listdir(keyring)
-            cmd_str = ["pacman", "-Rdd", "arcolinux-keyring", "--noconfirm"]
-            logger.info("Removing ArcoLinux mirrorlist")
+                result_err["cmd_str"] = cmd_str
+                result_err["output"] = output
 
-            logger.debug("%s" % " ".join(cmd_str))
+                return result_err
+    except Exception as e:
+        logger.error("Exception in install_arco_mirrorlist(): %s" % e)
 
-        if cmd_str is not None:
-            with subprocess.Popen(
-                cmd_str,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                bufsize=1,
-                universal_newlines=True,
-            ) as process:
-                process.wait(process_timeout)
+        result_err = {}
 
-                output = []
+        result_err["cmd_str"] = cmd_str
+        result_err["output"] = output
 
-                for line in process.stdout:
-                    output.append(line)
+        return result_err
 
-                if process.returncode == 0:
-                    return 0
 
-                else:
-                    if len(output) == 0:
-                        output.append("Error: %s %s failed" % (config, action))
+def remove_arco_mirrorlist():
+    try:
+        cmd_str = ["pacman", "-Rdd", "arcolinux-mirrorlist-git", "--noconfirm"]
+        logger.debug("%s" % " ".join(cmd_str))
+        with subprocess.Popen(
+            cmd_str,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            process.wait(process_timeout)
 
-                    logger.error(" ".join(output))
+            output = []
 
-                    result_err = {}
+            for line in process.stdout:
+                output.append(line)
 
-                    result_err["cmd_str"] = cmd_str
-                    result_err["output"] = output
+            if process.returncode == 0:
+                return 0
 
-                    return result_err
+            else:
+                if len(output) == 0:
+                    output.append("Error: removal of ArcoLinux mirrorlist failed")
+
+                logger.error(" ".join(output))
+
+                result_err = {}
+
+                result_err["cmd_str"] = cmd_str
+                result_err["output"] = output
+
+                return result_err
 
     except Exception as e:
-        logger.error("Exception in setup_arcolinux_config(): %s" % e)
+        logger.error("Exception in remove_arco_mirrorlist(): %s" % e)
+
+        result_err = {}
+
+        result_err["cmd_str"] = cmd_str
+        result_err["output"] = e
+
+        return result_err
 
 
-def add_repos():
-    # add ArcoLinux repos in /etc/pacman.conf
-    # if distr == "arcolinux":
+def add_arco_repos():
     logger.info("Adding ArcoLinux repos on %s" % distr)
     try:
-        # take backup of existing pacman.conf file
-        if os.path.exists(pacman_conf):
-            shutil.copy(pacman_conf, pacman_conf_backup)
+        # first check if arco repos are already inside pacman conf file
 
-            # read existing contents from pacman.conf file
+        if verify_arco_pacman_conf() is False:
+            # take backup of existing pacman.conf file
 
-            logger.debug("Reading from %s" % pacman_conf)
+            if os.path.exists(pacman_conf):
+                shutil.copy(pacman_conf, pacman_conf_backup)
 
-            lines = []
+                # read existing contents from pacman.conf file
 
-            with open(pacman_conf, "r", encoding="utf-8") as r:
-                lines = r.readlines()
+                logger.info("Reading from %s" % pacman_conf)
 
-            # check for existing ArcoLinux entries
-            if len(lines) > 0:
-                index = None
-                # add arco repo testing line just below the default arch #[testing] or #[core-testing] entries
-                if "#[arcolinux_repo_testing]\n" not in lines:
-                    i = 0
+                lines = []
 
-                    for x in arco_test_repo:
-                        if i == 0:
-                            lines.append("\n%s\n" % x)
-                        else:
-                            lines.append("%s\n" % x)
-                        i += 1
+                with open(pacman_conf, "r", encoding="utf-8") as r:
+                    lines = r.readlines()
 
-                if "[arcolinux_repo]\n" not in lines:
-                    i = 0
-                    for x in arco_repo:
-                        if i == 0:
-                            # add new line only at the start of the very first line
-                            lines.append("\n%s\n" % x)
-                        else:
-                            lines.append("%s\n" % x)
-
-                        i += 1
-
-                if "[arcolinux_repo_3party]\n" not in lines:
-                    i = 0
-                    for x in arco_3rd_party_repo:
-                        if i == 0:
-                            # add new line only at the start of the very first line
-                            lines.append("\n%s\n" % x)
-                        else:
-                            lines.append("%s\n" % x)
-
-                        i += 1
-
-                if "[arcolinux_repo_xlarge]\n" not in lines:
-                    i = 0
-                    for x in arco_xlrepo:
-                        if i == 0:
-                            # add new line only at the start of the very first line
-                            lines.append("\n%s\n" % x)
-                        else:
-                            lines.append("%s\n" % x)
-
-                        i += 1
-
-                logger.debug("[Add repos] Writing to %s" % pacman_conf)
-
+                # check for existing ArcoLinux entries
                 if len(lines) > 0:
-                    with open(pacman_conf, "w", encoding="utf-8") as w:
-                        w.writelines(lines)
+                    arco_test_repo_found = False
+                    arco_repo_found = False
+                    arco_3rd_party_repo_found = False
+                    arco_xlrepo_found = False
 
-                        w.flush()
+                    for line in lines:
+                        if "#" in line.strip():
+                            if arco_test_repo[0].replace("#", "") in line.strip():
+                                arco_test_repo_found = True
 
-                    return 0
+                            if arco_repo[0].replace("#", "") in line.strip():
+                                arco_repo_found = True
+                                index = lines.index(line)
+
+                                del lines[index]
+                                lines.insert(index, arco_repo[0])
+
+                                index += 1
+
+                                del lines[index]
+                                lines.insert(index, arco_repo[1])
+
+                                index += 1
+
+                                del lines[index]
+                                lines.insert(index, arco_repo[2])
+
+                            if arco_3rd_party_repo[0].replace("#", "") in line.strip():
+                                arco_3rd_party_repo_found = True
+                                index = lines.index(line)
+
+                                del lines[index]
+                                lines.insert(index, arco_3rd_party_repo[0])
+
+                                index += 1
+
+                                del lines[index]
+                                lines.insert(index, arco_3rd_party_repo[1])
+
+                                index += 1
+
+                                del lines[index]
+                                lines.insert(index, arco_3rd_party_repo[2])
+
+                            if arco_xlrepo[0].replace("#", "") in line.strip():
+                                arco_xlrepo_found = True
+                                index = lines.index(line)
+
+                                del lines[index]
+                                lines.insert(index, arco_xlrepo[0])
+
+                                index += 1
+
+                                del lines[index]
+                                lines.insert(index, arco_xlrepo[1])
+
+                                index += 1
+
+                                del lines[index]
+                                lines.insert(index, arco_xlrepo[2])
+
+                        if line.strip() == arco_test_repo[0]:
+                            arco_test_repo_found = True
+
+                        if line.strip() == arco_repo[0]:
+                            arco_repo_found = True
+
+                        if line.strip() == arco_3rd_party_repo[0]:
+                            arco_3rd_party_repo_found = True
+
+                        if line.strip() == arco_xlrepo[0]:
+                            arco_xlrepo_found = True
+
+                    if arco_test_repo_found is False:
+                        lines.append("\n")
+
+                        for arco_test_repo_line in arco_test_repo:
+                            lines.append(arco_test_repo_line)
+
+                    if arco_repo_found is False:
+                        lines.append("\n")
+
+                        for arco_repo_line in arco_repo:
+                            lines.append(arco_repo_line)
+
+                    if arco_3rd_party_repo_found is False:
+                        lines.append("\n")
+
+                        for arco_3rd_party_repo_line in arco_3rd_party_repo:
+                            lines.append(arco_3rd_party_repo_line)
+
+                    if arco_xlrepo_found is False:
+                        lines.append("\n")
+
+                        for arco_xlrepo_line in arco_xlrepo:
+                            lines.append(arco_xlrepo_line)
+
+                    logger.info("[Add ArcoLinux repos] Writing to %s" % pacman_conf)
+
+                    if len(lines) > 0:
+                        with open(pacman_conf, "w", encoding="utf-8") as w:
+                            for l in lines:
+                                w.write(l.strip() + "\n")
+
+                            w.flush()
+
+                        return 0
+
+                    else:
+                        logger.error("Failed to process %s" % pacman_conf)
 
                 else:
-                    logger.error("Failed to process %s" % pacman_conf)
-
-            else:
-                logger.error("Failed to read %s" % pacman_conf)
+                    logger.error("Failed to read %s" % pacman_conf)
+        else:
+            logger.info("ArcoLinux repos already setup inside pacman conf file")
+            return 0
 
     except Exception as e:
-        logger.error("Exception in add_repos(): %s" % e)
+        logger.error("Exception in add_arco_repos(): %s" % e)
         return e
 
 
-def remove_repos():
+def remove_arco_repos():
     # remove the ArcoLinux repos in /etc/pacman.conf
     try:
-        if os.path.exists(pacman_conf):
-            shutil.copy(pacman_conf, pacman_conf_backup)
+        # check for existing ArcoLinux entries and remove
+        if verify_arco_pacman_conf() is True:
+            if os.path.exists(pacman_conf):
+                shutil.copy(pacman_conf, pacman_conf_backup)
 
-            logger.debug("Reading from %s" % pacman_conf)
+                logger.info("Reading from %s" % pacman_conf)
 
-            lines = []
+                lines = []
 
-            with open(pacman_conf, "r", encoding="utf-8") as r:
-                lines = r.readlines()
-
-            # check for existing ArcoLinux entries and remove
-
-            if len(lines) > 0:
-                for arco_test_repo_line in arco_test_repo:
-                    if (
-                        "%s\n" % arco_test_repo_line in lines
-                        and len(arco_test_repo_line) > 0
-                    ):
-                        lines.remove("%s\n" % arco_test_repo_line)
-
-                for arco_repo_line in arco_repo:
-                    if "%s\n" % arco_repo_line in lines and len(arco_repo_line) > 0:
-                        lines.remove("%s\n" % arco_repo_line)
-
-                for arco_3rd_party_repo_line in arco_3rd_party_repo:
-                    if (
-                        "%s\n" % arco_3rd_party_repo_line in lines
-                        and len(arco_3rd_party_repo_line) > 0
-                    ):
-                        lines.remove("%s\n" % arco_3rd_party_repo_line)
-
-                for arco_xlrepo_line in arco_xlrepo:
-                    if "%s\n" % arco_xlrepo_line in lines and len(arco_xlrepo_line) > 0:
-                        lines.remove("%s\n" % arco_xlrepo_line)
-
-                # for i in range(1, 4):
-                #     lines[-i] = lines[-i].strip()
-
-                logger.debug("[Remove Repos] Writing to %s" % pacman_conf)
+                with open(pacman_conf, "r", encoding="utf-8") as r:
+                    lines = r.readlines()
 
                 if len(lines) > 0:
-                    with open(pacman_conf, "w", encoding="utf-8") as w:
-                        w.writelines(lines)
+                    index = 0
 
-                        w.flush()
+                    for line in lines:
+                        if arco_test_repo[0] == line.strip().replace(" ", ""):
+                            index = lines.index(line)
 
-                    return 0
+                            if index > 0:
+                                if distr != "arcolinux":
+                                    del lines[index]
+                                    del lines[index]
+                                    del lines[index]
+
+                        # make sure the arco testing repo is disabled, if absolutely required update the pacman conf file manually and enable them
+
+                        if "%s" % arco_test_repo[0].replace("#", "") == line.strip():
+                            index = lines.index(
+                                "%s\n" % arco_test_repo[0].replace("#", "")
+                            )
+                            if distr != "arcolinux":
+                                del lines[index]
+                                del lines[index]
+                                del lines[index]
+                            else:
+                                # comment out the testing repo
+
+                                lines[index] = "%s\n" % arco_test_repo[0]
+                                lines[index + 1] = "%s\n" % arco_test_repo[1]
+                                lines[index + 2] = "%s\n" % arco_test_repo[2]
+
+                        if "%s\n" % arco_repo[0] == line:
+                            index = lines.index("%s\n" % arco_repo[0])
+
+                            if index > 0:
+                                if distr != "arcolinux":
+                                    del lines[index]
+                                    del lines[index]
+                                    del lines[index]
+                                else:
+                                    lines[index] = "#%s\n" % arco_repo[0]
+                                    lines[index + 1] = "#%s\n" % arco_repo[1]
+                                    lines[index + 2] = "#%s\n" % arco_repo[2]
+                        elif (
+                            "#" in line.strip()
+                            and arco_repo[0] == line.replace("#", "").strip()
+                            and distr != "arcolinux"
+                        ):
+                            # check if already commented
+
+                            index = lines.index(line)
+                            del lines[index]
+                            del lines[index]
+                            del lines[index]
+
+                        if "%s\n" % arco_3rd_party_repo[0] == line:
+                            index = lines.index("%s\n" % arco_3rd_party_repo[0])
+
+                            if index > 0:
+                                if distr != "arcolinux":
+                                    del lines[index]
+                                    del lines[index]
+                                    del lines[index]
+                                else:
+                                    lines[index] = "#%s\n" % arco_3rd_party_repo[0]
+                                    lines[index + 1] = "#%s\n" % arco_3rd_party_repo[1]
+                                    lines[index + 2] = "#%s\n" % arco_3rd_party_repo[2]
+                        elif (
+                            "#" in line.strip()
+                            and arco_3rd_party_repo[0] == line.replace("#", "").strip()
+                            and distr != "arcolinux"
+                        ):
+                            # check if already commented
+
+                            index = lines.index(line)
+                            del lines[index]
+                            del lines[index]
+                            del lines[index]
+
+                        if "%s\n" % arco_xlrepo[0] == line:
+                            index = lines.index("%s\n" % arco_xlrepo[0])
+
+                            if index > 0:
+                                if distr != "arcolinux":
+                                    del lines[index]
+                                    del lines[index]
+                                    del lines[index]
+                                else:
+                                    lines[index] = "#%s\n" % arco_xlrepo[0]
+                                    lines[index + 1] = "#%s\n" % arco_xlrepo[1]
+                                    lines[index + 2] = "#%s\n" % arco_xlrepo[2]
+                        elif (
+                            "#" in line.strip()
+                            and arco_xlrepo[0] == line.replace("#", "").strip()
+                            and distr != "arcolinux"
+                        ):
+                            # check if already commented
+
+                            index = lines.index(line)
+                            del lines[index]
+                            del lines[index]
+                            del lines[index]
+
+                    # remove any white spaces from end of the file only if on non arcolinux system
+                    # on any non arcolinux distro lines are deleted which leaves empty lines in the file
+                    # causing the file to grow in size
+                    if distr != "arcolinux":
+                        if lines[-1] == "\n":
+                            del lines[-1]
+
+                        if lines[-2] == "\n":
+                            del lines[-2]
+
+                        if lines[-3] == "\n":
+                            del lines[-3]
+
+                        if lines[-4] == "\n":
+                            del lines[-4]
+
+                    logger.info("[Remove ArcoLinux Repos] Writing to %s" % pacman_conf)
+
+                    if len(lines) > 0:
+                        with open(pacman_conf, "w") as w:
+                            w.writelines(lines)
+
+                            w.flush()
+
+                        return 0
+
+                    else:
+                        logger.error("Failed to process %s" % pacman_conf)
 
                 else:
-                    logger.error("Failed to process %s" % pacman_conf)
-
-            else:
-                logger.error("Failed to read %s" % pacman_conf)
+                    logger.error("Failed to read %s" % pacman_conf)
+        else:
+            logger.info("No ArcoLinux repos setup inside pacman conf file")
+            return 0
 
     except Exception as e:
-        logger.error("Exception in remove_repos(): %s" % e)
+        logger.error("Exception in remove_arco_repos(): %s" % e)
         return e
+
+
+# check if pacman.conf has arco repos setup
+
+
+def verify_arco_pacman_conf():
+    try:
+        lines = None
+        arco_repo_setup = False
+        arco_3rd_party_repo_setup = False
+        arco_xlrepo_setup = False
+        with open(pacman_conf, "r") as r:
+            lines = r.readlines()
+
+        if lines is not None:
+            for line in lines:
+                if arco_repo[0] in line.strip():
+                    if "#" not in line.strip():
+                        arco_repo_setup = True
+                    else:
+                        return False
+
+                if arco_3rd_party_repo[0] in line.strip():
+                    if "#" not in line.strip():
+                        arco_3rd_party_repo_setup = True
+                    else:
+                        return False
+
+                if arco_xlrepo[0] in line.strip():
+                    if "#" not in line.strip():
+                        arco_xlrepo_setup = True
+                    else:
+                        return False
+
+            if (
+                arco_repo_setup is True
+                and arco_3rd_party_repo_setup is True
+                and arco_xlrepo_setup is True
+            ):
+                return True
+            else:
+                return False
+    except Exception as e:
+        logger.error("Exception in check_arco_pacman(): %s" % e)
 
 
 # =====================================================
@@ -1730,8 +2044,8 @@ def terminate_pacman():
                 continue
 
         if process_found is True:
-            check_pacman_lockfile()
-            os.unlink(pacman_lockfile)
+            if check_pacman_lockfile():
+                os.unlink(pacman_lockfile)
     except Exception as e:
         logger.error("Exception in terminate_pacman() : %s" % e)
 

@@ -168,6 +168,7 @@ class PackageListDialog(Gtk.Dialog):
                 fn.permissions(filename)
 
                 message_dialog = MessageDialog(
+                    "Info",
                     "Package export complete",
                     "Package list exported to %s" % filename,
                     "",
@@ -184,6 +185,7 @@ class PackageListDialog(Gtk.Dialog):
                 fn.logger.error("Export failed")
 
                 message_dialog = MessageDialog(
+                    "Error",
                     "Package export failed",
                     "Failed to export package list to %s." % filename,
                     "",
@@ -199,21 +201,44 @@ class PackageListDialog(Gtk.Dialog):
         except Exception as e:
             fn.logger.error("Exception in on_dialog_export_clicked(): %s" % e)
 
+    # noqa: any locales other than en_GB.UTF-8 / en_US.UTF-8 are untested
     def compare_install_date(self, model, row1, row2, user_data):
         try:
             sort_column, _ = model.get_sort_column_id()
-            value1 = model.get_value(row1, sort_column)
-            value2 = model.get_value(row2, sort_column)
+            str_value1 = model.get_value(row1, sort_column)
+            str_value2 = model.get_value(row2, sort_column)
 
-            datetime_val1 = fn.datetime.strptime(value1, "%a %d %b %Y %H:%M:%S %Z")
+            datetime_value1 = None
+            datetime_value2 = None
 
-            datetime_val2 = fn.datetime.strptime(value2, "%a %d %b %Y %H:%M:%S %Z")
-
-            if datetime_val1 < datetime_val2:
-                return -1
-            elif datetime_val1 == datetime_val2:
-                return 0
+            # convert string into datetime object, check if time format is 12H format with AM/PM
+            if str_value1.lower().find("am") > 0 or str_value1.lower().find("pm") > 0:
+                # 12H format
+                datetime_value1 = fn.datetime.strptime(
+                    str_value1, "%a %d %b %Y %I:%M:%S %p %Z"
+                ).replace(tzinfo=None)
+                datetime_value2 = fn.datetime.strptime(
+                    str_value2, "%a %d %b %Y %I:%M:%S %p %Z"
+                ).replace(tzinfo=None)
             else:
-                return 1
+                # 24H format
+                datetime_value1 = fn.datetime.strptime(
+                    str_value1, "%a %d %b %Y %H:%M:%S %Z"
+                ).replace(tzinfo=None)
+                datetime_value2 = fn.datetime.strptime(
+                    str_value2, "%a %d %b %Y %H:%M:%S %Z"
+                ).replace(tzinfo=None)
+
+            if datetime_value1 is not None and datetime_value2 is not None:
+                if datetime_value1 < datetime_value2:
+                    return -1
+                elif datetime_value1 == datetime_value2:
+                    return 0
+                else:
+                    return 1
+        except ValueError as ve:
+            # fn.logger.error("ValueError in compare_install_date: %s" % ve)
+            # compare fails due to the format of the datetime string, which hasn't been tested
+            pass
         except Exception as e:
             fn.logger.error("Exception in compare_install_date: %s" % e)

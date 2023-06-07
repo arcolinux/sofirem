@@ -78,6 +78,9 @@ class Main(Gtk.Window):
             # initial app load search_activated is set to False
             self.search_activated = False
 
+            # initial app load show the progress dialog window when a package is installed/uninstalled
+            self.show_progress_dialog = True
+
             print(
                 "---------------------------------------------------------------------------"
             )
@@ -118,6 +121,7 @@ class Main(Gtk.Window):
                 # test there is no pacman lock file on the system
                 if fn.check_pacman_lockfile():
                     message_dialog = MessageDialog(
+                        "Error",
                         "Sofirem cannot proceed pacman lockfile found",
                         "Pacman cannot lock the db, a lockfile is found inside %s"
                         % fn.pacman_lockfile,
@@ -173,34 +177,35 @@ class Main(Gtk.Window):
 
                 # pacman sync db and also tests network connectivity
 
-                self.pacman_db_sync()
+                if self.pacman_db_sync() is True:
+                    # store package information into memory, and use the dictionary returned to search in for quicker retrieval
+                    fn.logger.info("Storing package metadata started")
 
-                # store package information into memory, and use the dictionary returned to search in for quicker retrieval
-                fn.logger.info("Storing package metadata started")
+                    self.packages = fn.store_packages()
+                    fn.logger.info("Storing package metadata completed")
 
-                self.packages = fn.store_packages()
-                fn.logger.info("Storing package metadata completed")
+                    fn.logger.info("Categories = %s" % len(self.packages.keys()))
 
-                fn.logger.info("Categories = %s" % len(self.packages.keys()))
+                    total_packages = 0
 
-                total_packages = 0
+                    for category in self.packages:
+                        total_packages += len(self.packages[category])
 
-                for category in self.packages:
-                    total_packages += len(self.packages[category])
+                    fn.logger.info("Total packages = %s" % total_packages)
 
-                fn.logger.info("Total packages = %s" % total_packages)
+                    splash_screen = SplashScreen()
 
-                splash_screen = SplashScreen()
+                    while Gtk.events_pending():
+                        Gtk.main_iteration()
 
-                while Gtk.events_pending():
-                    Gtk.main_iteration()
+                    sleep(3)
+                    splash_screen.destroy()
 
-                sleep(3)
-                splash_screen.destroy()
+                    fn.logger.info("Setting up GUI")
 
-                fn.logger.info("Setting up GUI")
-
-                GUI.setup_gui(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
+                    GUI.setup_gui(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
+                else:
+                    sys.exit(1)
 
             else:
                 fn.logger.error("Sofirem lock file found in %s" % fn.sofirem_lockfile)
@@ -223,6 +228,7 @@ class Main(Gtk.Window):
             )
 
             message_dialog = MessageDialog(
+                "Error",
                 "Pacman db synchronisation failed",
                 "Failed to run command = pacman -Sy\nPacman db synchronisation failed\nCheck the synchronisation logs, and verify you can connect to the appropriate mirrors\n\n",
                 sync_err,
@@ -234,8 +240,12 @@ class Main(Gtk.Window):
             message_dialog.run()
             message_dialog.hide()
 
+            return False
+
         else:
             fn.logger.info("Pacman synchronisation completed")
+
+            return True
 
     # =====================================================
     #               WINDOW KEY EVENT CTRL + F
@@ -319,6 +329,7 @@ class Main(Gtk.Window):
                         self.searchentry.grab_focus()
 
                         message_dialog = MessageDialog(
+                            "Info",
                             "Search returned 0 results",
                             "Failed to find search term inside the package name or description.",
                             "Try to search again using another term",
@@ -388,6 +399,12 @@ class Main(Gtk.Window):
             if len(package.name) > 0:
                 # check there is no pacman lockfile before continuing
                 if fn.check_pacman_lockfile() is False:
+                    widget.set_sensitive(False)
+
+                    self.switch_pkg_version.set_sensitive(False)
+                    self.switch_arco_keyring.set_sensitive(False)
+                    self.switch_arco_mirrorlist.set_sensitive(False)
+
                     package_metadata = fn.get_package_information(package.name)
 
                     if (
@@ -403,6 +420,7 @@ class Main(Gtk.Window):
                         fn.logger.warning("Package install cannot continue")
 
                         message_dialog = MessageDialog(
+                            "Error",
                             "Pacman repository error: package '%s' was not found"
                             % package.name,
                             "Sofirem cannot process the request",
@@ -436,8 +454,8 @@ class Main(Gtk.Window):
                             " ".join(inst_str),
                             package_metadata,
                         )
-
-                        progress_dialog.show_all()
+                        if self.show_progress_dialog is True:
+                            progress_dialog.show_all()
                         self.pkg_queue.put(
                             (
                                 package,
@@ -462,6 +480,7 @@ class Main(Gtk.Window):
                     proc = fn.get_pacman_process()
 
                     message_dialog = MessageDialog(
+                        "Warning",
                         "Sofirem cannot proceed pacman lockfile found",
                         "Pacman cannot lock the db, a lockfile is found inside %s"
                         % fn.pacman_lockfile,
@@ -483,6 +502,12 @@ class Main(Gtk.Window):
                 if fn.check_pacman_lockfile() is False:
                     widget.set_active(False)
                     widget.set_state(False)
+                    widget.set_sensitive(False)
+
+                    self.switch_pkg_version.set_sensitive(False)
+                    self.switch_arco_keyring.set_sensitive(False)
+                    self.switch_arco_mirrorlist.set_sensitive(False)
+
                     fn.logger.info("Package to remove : %s" % package.name)
                     package_metadata = fn.get_package_information(package.name)
 
@@ -494,8 +519,9 @@ class Main(Gtk.Window):
                         " ".join(uninst_str),
                         package_metadata,
                     )
+                    if self.show_progress_dialog is True:
+                        progress_dialog.show_all()
 
-                    progress_dialog.show_all()
                     self.pkg_queue.put(
                         (
                             package,
@@ -519,6 +545,7 @@ class Main(Gtk.Window):
                     proc = fn.get_pacman_process()
 
                     message_dialog = MessageDialog(
+                        "Warning",
                         "Sofirem cannot proceed pacman lockfile found",
                         "Pacman cannot lock the db, a lockfile is found inside %s"
                         % fn.pacman_lockfile,
@@ -589,44 +616,28 @@ class Main(Gtk.Window):
 
     # ArcoLinux keys, mirrors setup
 
-    def arco_repo_toggle(self, widget, data):
-        # self.toggle_popover()
-
-        # toggle is currently off
+    def arco_keyring_toggle(self, widget, data):
+        # toggle is currently off, add keyring
         if widget.get_state() == False and widget.get_active() == True:
-            widget.set_active(True)
-            widget.set_state(True)
-
-            fn.logger.info("Enabling ArcoLinux keys and mirrors")
-
-            install_keyring = None
-            install_mirrorlist = None
-
             fn.logger.info("Installing ArcoLinux keyring")
-            install_keyring = fn.setup_arcolinux_config(self, "install", "keyring")
+            install_keyring = fn.install_arco_keyring()
 
             if install_keyring == 0:
                 fn.logger.info("Installation of ArcoLinux keyring = OK")
-
-                fn.logger.info("Now installing ArcoLinux mirrorlist")
-                install_mirrorlist = fn.setup_arcolinux_config(
-                    self, "install", "mirrorlist"
-                )
-
-                if install_mirrorlist == 0:
-                    fn.logger.info("Installation of ArcoLinux mirrorlist = OK")
-
+                rc = fn.add_arco_repos()
+                if rc == 0:
+                    fn.logger.info("ArcoLinux repos added into %s" % fn.pacman_conf)
+                    widget.set_active(True)
                 else:
-                    fn.logger.error("Failed to install ArcoLinux mirrorlist")
-
                     message_dialog = MessageDialog(
-                        "Failed to install ArcoLinux mirrorlist",
-                        "Errors occurred during install of the ArcoLinux mirrorlist",
-                        "Command run = %s\n\n Error = %s"
-                        % (install_mirrorlist["cmd_str"], install_mirrorlist["output"]),
+                        "Error",
+                        "Failed to update pacman conf",
+                        "Errors occurred during update of the pacman config file",
+                        rc,
                         "error",
                         True,
                     )
+
                     message_dialog.show_all()
                     message_dialog.run()
                     message_dialog.hide()
@@ -635,10 +646,10 @@ class Main(Gtk.Window):
                     widget.set_state(False)
 
                     return True
-            else:
-                fn.logger.error("Failed to install ArcoLinux keyring")
 
+            else:
                 message_dialog = MessageDialog(
+                    "Error",
                     "Failed to install ArcoLinux keyring",
                     "Errors occurred during install of the ArcoLinux keyring",
                     "Command run = %s\n\n Error = %s"
@@ -655,79 +666,23 @@ class Main(Gtk.Window):
                 widget.set_state(False)
 
                 return True
-
-            if install_keyring == 0 and install_mirrorlist == 0:
-                fn.logger.info(
-                    "Updating pacman configuration file = %s" % fn.pacman_conf
-                )
-                rc = fn.add_repos()
-
-                if rc == 0:
-                    fn.logger.info("Pacman configuration file update OK")
-
-                    fn.logger.info(
-                        "Running pacman db synchronisation, due to change in pacman configuration"
-                    )
-
-                    self.pacman_db_sync()
-
-                    # pacman db refreshed, also update reference to packages
-
-                    self.packages = fn.store_packages()
-
-                else:
-                    fn.logger.error("Failed to update pacman configuration file")
-
-                    if rc:
-                        message_dialog = MessageDialog(
-                            "Failed to update pacman configuration file",
-                            "Errors occurred during update of the pacman configuration file %s"
-                            % fn.pacman_conf,
-                            rc,
-                            "error",
-                            True,
-                        )
-
-                        message_dialog.show_all()
-                        message_dialog.run()
-                        message_dialog.hide()
-
-                        widget.set_active(False)
-                        widget.set_state(False)
-
-                        return True
-
         # toggle is currently on
         if widget.get_state() == True and widget.get_active() == False:
-            widget.set_active(False)
-            widget.set_state(False)
-
-            fn.logger.info("Disabling ArcoLinux keys and mirrors")
-
-            remove_keyring = None
-            remove_mirrorlist = None
-
-            remove_keyring = fn.setup_arcolinux_config(self, "remove", "keyring")
+            remove_keyring = fn.remove_arco_keyring()
 
             if remove_keyring == 0:
                 fn.logger.info("Removing ArcoLinux keyring OK")
 
-                fn.logger.info("Removing ArcoLinux mirrorlist")
-
-                remove_mirrorlist = fn.setup_arcolinux_config(
-                    self, "remove", "mirrorlist"
-                )
-
-                if remove_mirrorlist == 0:
-                    fn.logger.info("Removing ArcoLinux mirrorlist OK")
+                rc = fn.remove_arco_repos()
+                if rc == 0:
+                    fn.logger.info("ArcoLinux repos removed from %s" % fn.pacman_conf)
+                    widget.set_active(False)
                 else:
-                    fn.logger.error("Failed to remove ArcoLinux mirrorlist")
-
                     message_dialog = MessageDialog(
-                        "Failed to remove ArcoLinux mirrorlist",
-                        "Errors occurred during removal of the ArcoLinux mirrorlist",
-                        "Command run = %s\n\n Error = %s"
-                        % (remove_mirrorlist["cmd_str"], remove_mirrorlist["output"]),
+                        "Error",
+                        "Failed to update pacman conf",
+                        "Errors occurred during update of the pacman config file",
+                        rc,
                         "error",
                         True,
                     )
@@ -744,10 +699,147 @@ class Main(Gtk.Window):
                 fn.logger.error("Failed to remove ArcoLinux keyring")
 
                 message_dialog = MessageDialog(
+                    "Error",
                     "Failed to remove ArcoLinux keyring",
                     "Errors occurred during removal of the ArcoLinux keyring",
                     "Command run = %s\n\n Error = %s"
                     % (remove_keyring["cmd_str"], remove_keyring["output"]),
+                    "error",
+                    True,
+                )
+
+                message_dialog.show_all()
+                message_dialog.run()
+                message_dialog.hide()
+
+                widget.set_active(False)
+                widget.set_state(False)
+
+                return True
+
+    def arco_mirrorlist_toggle(self, widget, data):
+        # self.toggle_popover()
+
+        # toggle is currently off
+
+        if widget.get_state() == False and widget.get_active() == True:
+            widget.set_active(True)
+            widget.set_state(True)
+
+            # before installing the mirrorlist make sure the pacman.conf file does not have any references to /etc/pacman.d/arcolinux-mirrorlist
+            # otherwise the mirrorlist package will not install
+            rc_remove = fn.remove_arco_repos()
+            if rc_remove == 0:
+                install_mirrorlist = fn.install_arco_mirrorlist()
+
+                if install_mirrorlist == 0:
+                    fn.logger.info("Installation of ArcoLinux mirrorlist = OK")
+
+                    rc_add = fn.add_arco_repos()
+                    if rc_add == 0:
+                        fn.logger.info("ArcoLinux repos added into %s" % fn.pacman_conf)
+                        self.pacman_db_sync()
+
+                    else:
+                        message_dialog = MessageDialog(
+                            "Error",
+                            "Failed to update pacman conf",
+                            "Errors occurred during update of the pacman config file",
+                            rc_add,
+                            "error",
+                            True,
+                        )
+
+                        message_dialog.show_all()
+                        message_dialog.run()
+                        message_dialog.hide()
+
+                        widget.set_active(False)
+                        widget.set_state(False)
+
+                        return True
+
+                else:
+                    fn.logger.error("Failed to install ArcoLinux mirrorlist")
+
+                    message_dialog = MessageDialog(
+                        "Error",
+                        "Failed to install ArcoLinux mirrorlist",
+                        "Errors occurred during install of the ArcoLinux mirrorlist",
+                        "Command run = %s\n\n Error = %s"
+                        % (install_mirrorlist["cmd_str"], install_mirrorlist["output"]),
+                        "error",
+                        True,
+                    )
+                    message_dialog.show_all()
+                    message_dialog.run()
+                    message_dialog.hide()
+
+                    widget.set_active(False)
+                    widget.set_state(False)
+
+                    return True
+            else:
+                message_dialog = MessageDialog(
+                    "Error",
+                    "Failed to update pacman conf",
+                    "Errors occurred during update of the pacman config file",
+                    rc,
+                    "error",
+                    True,
+                )
+
+                message_dialog.show_all()
+                message_dialog.run()
+                message_dialog.hide()
+
+                widget.set_active(False)
+                widget.set_state(False)
+
+                return True
+        # toggle is currently on
+        if widget.get_state() == True and widget.get_active() == False:
+            widget.set_active(False)
+            widget.set_state(False)
+
+            fn.logger.info("Removing ArcoLinux mirrorlist")
+
+            remove_mirrorlist = fn.remove_arco_mirrorlist()
+
+            if remove_mirrorlist == 0:
+                fn.logger.info("Removing ArcoLinux mirrorlist OK")
+
+                rc = fn.remove_arco_repos()
+                if rc == 0:
+                    fn.logger.info("ArcoLinux repos removed from %s" % fn.pacman_conf)
+                    widget.set_active(False)
+                else:
+                    message_dialog = MessageDialog(
+                        "Error",
+                        "Failed to update pacman conf",
+                        "Errors occurred during update of the pacman config file",
+                        rc,
+                        "error",
+                        True,
+                    )
+
+                    message_dialog.show_all()
+                    message_dialog.run()
+                    message_dialog.hide()
+
+                    widget.set_active(True)
+                    widget.set_state(True)
+
+                    return True
+            else:
+                fn.logger.error("Failed to remove ArcoLinux mirrorlist")
+
+                message_dialog = MessageDialog(
+                    "Error",
+                    "Failed to remove ArcoLinux mirrorlist",
+                    "Errors occurred during removal of the ArcoLinux mirrorlist",
+                    "Command run = %s\n\n Error = %s"
+                    % (remove_mirrorlist["cmd_str"], remove_mirrorlist["output"]),
                     "error",
                     True,
                 )
@@ -761,77 +853,19 @@ class Main(Gtk.Window):
 
                 return True
 
-            if remove_keyring == 0 and remove_mirrorlist == 0:
-                fn.logger.info(
-                    "Updating pacman configuration file = %s" % fn.pacman_conf
-                )
-                rc = fn.remove_repos()
-
-                if rc == 0:
-                    fn.logger.info("Pacman configuration file update OK")
-
-                    fn.logger.info(
-                        "Running pacman db synchronisation, due to change in pacman configuration"
-                    )
-
-                    self.pacman_db_sync()
-
-                    # pacman db refreshed, also update reference to packages
-
-                    self.packages = fn.store_packages()
-
-                else:
-                    fn.logger.error("Failed to update pacman configuration file")
-
-                    if rc:
-                        message_dialog = MessageDialog(
-                            "Failed to update pacman configuration file",
-                            "Errors occurred during update of the pacman configuration file %s"
-                            % fn.pacman_conf,
-                            rc,
-                            "error",
-                            True,
-                        )
-
-                        message_dialog.show_all()
-                        message_dialog.run()
-                        message_dialog.hide()
-
-                        widget.set_active(True)
-                        widget.set_state(True)
-
-                        return True
-            else:
-                message_dialog = MessageDialog(
-                    "Failed to remove ArcoLinux keyring/mirrorlist",
-                    "Errors occurred during removal of the ArcoLinux keyring/mirrorlist",
-                    "",
-                    "error",
-                    False,
-                )
-
-                message_dialog.show_all()
-                message_dialog.run()
-                message_dialog.hide()
-
-                widget.set_active(True)
-                widget.set_state(True)
-
-                return True
-
-        # return True to prevent the default handler from running
         return True
 
     def version_toggle(self, widget, data):
         if widget.get_active() == True:
-            fn.logger.info("Showing package versions")
+            fn.logger.debug("Showing package versions")
+
             self.display_versions = True
             GLib.idle_add(
                 self.refresh_main_gui,
                 priority=GLib.PRIORITY_DEFAULT,
             )
         else:
-            fn.logger.info("Hiding package versions")
+            fn.logger.debug("Hiding package versions")
             self.display_versions = False
             GLib.idle_add(
                 self.refresh_main_gui,
@@ -926,6 +960,12 @@ class Main(Gtk.Window):
 
         except Exception as e:
             fn.logger.error("Exception in on_pacman_log_clicked() : %s" % e)
+
+    def package_progress_toggle(self, widget, data):
+        if widget.get_active() is True:
+            self.show_progress_dialog = True
+        if widget.get_active() is False:
+            self.show_progress_dialog = False
 
 
 # ====================================================================

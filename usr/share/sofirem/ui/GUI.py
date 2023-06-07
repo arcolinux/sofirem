@@ -222,9 +222,11 @@ class GUI:
             #               QUIT BUTTON
             # =====================================================
 
-            # btnQuitSofi = Gtk.Button(label="Quit")
-            # btnQuitSofi.set_size_request(100, 30)
-            # btnQuitSofi.connect("clicked", self.on_close, "delete-event")
+            btn_quit_app = Gtk.Button(label="Quit")
+            btn_quit_app.set_size_request(100, 30)
+            btn_quit_app.connect("clicked", self.on_close, "delete-event")
+            btn_context = btn_quit_app.get_style_context()
+            btn_context.add_class("destructive-action")
 
             # =====================================================
             #               SEARCH BOX
@@ -253,9 +255,7 @@ class GUI:
             ivbox.pack_start(iv_searchbox, False, False, 0)
             ivbox.pack_start(stack_switcher, True, True, 0)
 
-            # ivbox.pack_start(btnReCache, False, False, 0)
-            # ivbox.pack_start(self.btnRepos, False, False, 0)
-            # ivbox.pack_start(btnQuitSofi, False, False, 0)
+            ivbox.pack_start(btn_quit_app, False, False, 0)
 
             vbox1.pack_start(hbox0, False, False, 0)
             vbox1.pack_start(stack, True, True, 0)
@@ -424,8 +424,8 @@ class GUI:
             #               RECACHE BUTTON
             # =====================================================
 
-            btnReCache = Gtk.Button(label="Recache Applications")
-            btnReCache.connect("clicked", self.recache_clicked)
+            # btnReCache = Gtk.Button(label="Recache Applications")
+            # btnReCache.connect("clicked", self.recache_clicked)
             # btnReCache.set_property("has-tooltip", True)
             # btnReCache.connect("query-tooltip", self.tooltip_callback,
             #           "Refresh the application cache")
@@ -437,10 +437,11 @@ class GUI:
             # =====================================================
             #               QUIT BUTTON
             # =====================================================
-            # btnQuitSofi = Gtk.Button(label="Quit")
-            # btnQuitSofi.set_size_request(100, 30)
-            # btnQuitSofi.connect("clicked", self.on_close, "delete-event")
-
+            btn_quit_app = Gtk.Button(label="Quit")
+            btn_quit_app.set_size_request(100, 30)
+            btn_quit_app.connect("clicked", self.on_close, "delete-event")
+            btn_context = btn_quit_app.get_style_context()
+            btn_context.add_class("destructive-action")
             # =====================================================
             #               SEARCH BOX
             # =====================================================
@@ -449,18 +450,14 @@ class GUI:
             self.searchentry.connect("activate", self.on_search_activated)
             self.searchentry.connect("icon-release", self.on_search_cleared)
 
-            ivSearchbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            ivsearchbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
-            ivSearchbox.pack_start(self.searchentry, False, False, 0)
+            ivsearchbox.pack_start(self.searchentry, False, False, 0)
 
             ivbox.pack_start(image, False, False, 0)
-            ivbox.pack_start(ivSearchbox, False, False, 0)
+            ivbox.pack_start(ivsearchbox, False, False, 0)
             ivbox.pack_start(stack_switcher, True, True, 0)
-
-            # leaving cache button out
-            # ivbox.pack_start(btnReCache, False, False, 0)
-            # ivbox.pack_start(self.btnRepos, False, False, 0)
-            # ivbox.pack_start(btnQuitSofi, False, False, 0)
+            ivbox.pack_start(btn_quit_app, False, False, 0)
 
             vbox1.pack_start(hbox0, False, False, 0)
             vbox1.pack_start(stack, True, True, 0)
@@ -499,8 +496,8 @@ def setup_headerbar(self, Gtk):
         self.popover = Gtk.Popover()
         self.popover.set_relative_to(toolbuttonSettings)
 
-        vbox = Gtk.Box(spacing=1, orientation=Gtk.Orientation.VERTICAL)
-        vbox.set_border_width(10)
+        vbox = Gtk.Box(spacing=0, orientation=Gtk.Orientation.VERTICAL)
+        vbox.set_border_width(15)
 
         # switch to display package versions
         self.switch_pkg_version = Gtk.Switch()
@@ -508,6 +505,7 @@ def setup_headerbar(self, Gtk):
 
         # button to open the pacman log monitoring dialog
         self.btn_pacmanlog = Gtk.ModelButton(label="Open Pacman Log File")
+
         self.btn_pacmanlog.connect("clicked", self.on_pacman_log_clicked)
         self.btn_pacmanlog.set_alignment(xalign=0, yalign=0)
 
@@ -515,11 +513,6 @@ def setup_headerbar(self, Gtk):
         btn_packages_export = Gtk.ModelButton(label="Show Installed Packages")
         btn_packages_export.connect("clicked", self.on_packages_export_clicked)
         btn_packages_export.set_alignment(xalign=0, yalign=0)
-
-        # quit button
-        btn_quit_app = Gtk.ModelButton(label="Quit Sofirem")
-        btn_quit_app.connect("clicked", self.on_close, "delete-event")
-        btn_quit_app.set_alignment(xalign=0, yalign=0)
 
         # button to show about dialog
         btn_about_app = Gtk.ModelButton(label="About Sofirem")
@@ -533,45 +526,95 @@ def setup_headerbar(self, Gtk):
 
         self.switch_pkg_version.connect("notify::active", self.version_toggle)
 
-        self.switch_arco_repo = Gtk.Switch()
-        self.switch_arco_repo.set_halign(Gtk.Align(1))
+        self.switch_arco_keyring = Gtk.Switch()
+        self.switch_arco_keyring.set_halign(Gtk.Align(1))
 
-        self.lbl_arco_repo = Gtk.Label(xalign=0, yalign=0)
-        self.lbl_arco_repo.set_text("Enable ArcoLinux Repos")
+        lbl_arco_keyring = Gtk.Label(xalign=0, yalign=0)
+        lbl_arco_keyring.set_text("Import ArcoLinux Keyring")
+
+        self.switch_arco_mirrorlist = Gtk.Switch()
+        self.switch_arco_mirrorlist.set_halign(Gtk.Align(1))
+
+        lbl_arco_mirrorlist = Gtk.Label(xalign=0, yalign=0)
+        lbl_arco_mirrorlist.set_text("Import ArcoLinux Mirrorlist")
 
         if (
             fn.check_package_installed("arcolinux-keyring") is False
-            or fn.check_package_installed("arcolinux-mirrorlist-git") is False
-            or fn.os.path.exists(fn.arcolinux_mirrorlist) is False
+            or fn.verify_arco_pacman_conf() is False
         ):
-            self.switch_arco_repo.set_state(False)
+            self.switch_arco_keyring.set_state(False)
 
         else:
-            self.switch_arco_repo.set_state(True)
+            self.switch_arco_keyring.set_state(True)
 
-        self.switch_arco_repo.connect("state-set", self.arco_repo_toggle)
+        self.switch_arco_keyring.connect("state-set", self.arco_keyring_toggle)
+
+        if (
+            fn.check_package_installed("arcolinux-mirrorlist-git") is False
+            or fn.verify_arco_pacman_conf() is False
+        ):
+            self.switch_arco_mirrorlist.set_state(False)
+
+        else:
+            self.switch_arco_mirrorlist.set_state(True)
+
+        self.switch_arco_mirrorlist.connect("state-set", self.arco_mirrorlist_toggle)
+
+        # switch to display/hide package install/uninstall progress dialog
+
+        lbl_package_progress = Gtk.Label(xalign=0, yalign=0)
+        lbl_package_progress.set_text("Display Package Progress Window")
+
+        self.switch_package_progress = Gtk.Switch()
+        self.switch_package_progress.set_halign(Gtk.Align(1))
+        self.switch_package_progress.set_active(True)
+
+        self.switch_package_progress.connect(
+            "notify::active", self.package_progress_toggle
+        )
 
         lbl_pkg_version = Gtk.Label(xalign=0, yalign=0)
-        lbl_pkg_version.set_text("Display package version ")
+        lbl_pkg_version.set_text("Display Package Version")
 
-        hbox1 = Gtk.Box(spacing=1, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox1.set_border_width(1)
-
+        hbox1 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox1.set_border_width(5)
         hbox1.pack_start(lbl_pkg_version, True, True, 1)
         hbox1.pack_start(self.switch_pkg_version, True, True, 1)
 
-        hbox2 = Gtk.Box(spacing=1, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox2.set_border_width(1)
+        hbox2 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox2.set_border_width(5)
+        hbox2.pack_start(lbl_arco_keyring, True, True, 1)
+        hbox2.pack_start(self.switch_arco_keyring, True, True, 1)
 
-        hbox2.pack_start(self.lbl_arco_repo, True, True, 1)
-        hbox2.pack_start(self.switch_arco_repo, True, True, 1)
+        hbox3 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox3.set_border_width(5)
+        hbox3.pack_start(lbl_arco_mirrorlist, True, True, 1)
+        hbox3.pack_start(self.switch_arco_mirrorlist, True, True, 1)
+
+        hbox4 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox4.set_border_width(5)
+        hbox4.pack_start(lbl_package_progress, True, True, 1)
+        hbox4.pack_start(self.switch_package_progress, True, True, 1)
+
+        hbox5 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox5.set_border_width(5)
+        hbox5.pack_start(self.btn_pacmanlog, True, True, 1)
+
+        hbox6 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox6.set_border_width(5)
+        hbox6.pack_start(btn_packages_export, True, True, 1)
+
+        hbox7 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox7.set_border_width(5)
+        hbox7.pack_start(btn_about_app, True, True, 1)
 
         vbox.pack_start(hbox1, True, True, 1)
         vbox.pack_start(hbox2, True, True, 1)
-        vbox.pack_start(self.btn_pacmanlog, True, True, 1)
-        vbox.pack_start(btn_packages_export, True, True, 1)
-        vbox.pack_start(btn_about_app, True, True, 1)
-        vbox.pack_start(btn_quit_app, True, True, 1)
+        vbox.pack_start(hbox3, True, True, 1)
+        vbox.pack_start(hbox4, True, True, 1)
+        vbox.pack_start(hbox5, True, True, 1)
+        vbox.pack_start(hbox6, True, True, 1)
+        vbox.pack_start(hbox7, True, True, 1)
 
         self.popover.add(vbox)
         self.popover.set_position(Gtk.PositionType.BOTTOM)

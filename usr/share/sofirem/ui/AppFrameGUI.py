@@ -120,7 +120,7 @@ class AppFrameGUI:
 
                         """
                             Changed to use signal state-set for switch widget.
-                            set_state(boolean) allows the switch to be enabled/disabled.
+                            set_state(boolean) allows the switch state to be enabled/disabled.
                             When a pkg install/uninstall fails, the switch widget is enabled/disabled inside a thread.
 
                             Changing the switch using set_active(bool), and using the signal notify::active
@@ -235,6 +235,11 @@ class AppFrameGUI:
 
                         # make the page scrollable
                         grid_sc = Gtk.ScrolledWindow()
+
+                        # hide the horizontal scrollbar showing on each grid row if the window width is resized
+                        grid_sc.set_policy(
+                            Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC
+                        )
                         grid_sc.add(grid)
 
                         grid_sc.set_propagate_natural_height(True)

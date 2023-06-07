@@ -24,8 +24,6 @@ class ProgressDialog(Gtk.Dialog):
         # so the following is a condition to make sure the data returned isn't an error
 
         if type(package_metadata) is dict:
-            # package_progress_dialog = Gtk.Dialog(self)
-
             package_progress_dialog_headerbar = Gtk.HeaderBar()
             package_progress_dialog_headerbar.set_show_close_button(True)
             self.set_titlebar(package_progress_dialog_headerbar)

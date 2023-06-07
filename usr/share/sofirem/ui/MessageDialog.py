@@ -14,7 +14,9 @@ class MessageDialog(Gtk.Dialog):
     # message_type is a string, either one of "info", "warning", "error" to show which infobar to display
     # extended argument when set to true shows a textview inside the dialog
     # extended argument when set to false only shows a standard dialog
-    def __init__(self, title, first_msg, secondary_msg, message_type, extended):
+    def __init__(
+        self, title, subtitle, first_msg, secondary_msg, message_type, extended
+    ):
         Gtk.Dialog.__init__(self)
 
         headerbar = Gtk.HeaderBar()
@@ -44,7 +46,7 @@ class MessageDialog(Gtk.Dialog):
             infobar.set_name("infobar_warning")
 
         lbl_title_message = Gtk.Label(xalign=0, yalign=0)
-        lbl_title_message.set_markup("<b>%s</b>" % title)
+        lbl_title_message.set_markup("<b>%s</b>" % subtitle)
         content = infobar.get_content_area()
         content.add(lbl_title_message)
 
