@@ -80,9 +80,9 @@
   selected: false
   expanded: true
   packages:
+    - a-candy-beauty-icon-theme-git
     - archlinux-login-backgrounds-git
     - arcolinux-arc-kde
-    - arcolinux-candy-beauty-git
     - arcolinux-mint-y-icons-git
     - arcolinux-plank-git
     - arcolinux-plank-themes-git

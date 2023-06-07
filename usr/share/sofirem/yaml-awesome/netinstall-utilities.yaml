@@ -169,6 +169,8 @@
   expanded: true
   packages:
     - auto-cpufreq
+    - betterlockscreen
+    - betterlockscreen-git
     - bleachbit
     - btrbk
     - caffeine

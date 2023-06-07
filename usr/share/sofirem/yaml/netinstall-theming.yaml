@@ -36,9 +36,9 @@
   selected: false
   expanded: true
   packages:
+    - a-candy-beauty-icon-theme-git
     - arc-icon-theme
     - arc-x-icons-theme
-    - arcolinux-candy-beauty-git
     - breeze-icons
     - dracula-icons-git
     - faba-icon-theme-git
