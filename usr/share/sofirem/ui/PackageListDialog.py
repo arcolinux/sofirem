@@ -11,7 +11,10 @@ gi.require_version("Gtk", "3.0")
 
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # base_dir = os.path.dirname(os.path.realpath(__file__))
-filename = "%s/sofirem-export.txt" % fn.home
+filename = "%s/%s-installed-packages.x86_64.txt" % (
+    fn.export_dir,
+    fn.datetime.now().strftime("%Y-%m-%d"),
+)
 
 
 class PackageListDialog(Gtk.Dialog):
@@ -37,7 +40,7 @@ class PackageListDialog(Gtk.Dialog):
         grid_packageslst.set_column_homogeneous(True)
 
         lbl_info = Gtk.Label(xalign=0, yalign=0)
-        lbl_info.set_text("Exported package list will be saved to %s" % filename)
+        lbl_info.set_text("Export destination %s" % filename)
 
         # get a list of installed packages on the system
 
@@ -56,7 +59,7 @@ class PackageListDialog(Gtk.Dialog):
             Gtk.Window.grab_focus(headerbar)
 
             treestore_packages = Gtk.TreeStore(str, str, str, str, str)
-            for item in installed_packages_lst:
+            for item in sorted(installed_packages_lst):
                 treestore_packages.append(None, list(item))
 
             treeview_packages = Gtk.TreeView()
@@ -158,7 +161,7 @@ class PackageListDialog(Gtk.Dialog):
                     "# Created by Sofirem on %s\n"
                     % fn.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 )
-                for package in installed_packages_lst:
+                for package in sorted(installed_packages_lst):
                     f.write("%s\n" % (package[0]))
 
             if os.path.exists(filename):

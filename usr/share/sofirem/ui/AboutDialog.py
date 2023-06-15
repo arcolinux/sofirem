@@ -37,6 +37,7 @@ class AboutDialog(Gtk.Dialog):
         self.set_resizable(False)
         self.set_size_request(560, 350)
         self.set_icon_from_file(os.path.join(base_dir, "images/sofirem.png"))
+        self.set_border_width(10)
 
         headerbar = Gtk.HeaderBar()
         headerbar.set_show_close_button(True)
@@ -94,22 +95,22 @@ class AboutDialog(Gtk.Dialog):
         grid_support.attach(lbl_padding1, 0, 1, 1, 1)
 
         lbl_support_title = Gtk.Label(xalign=0, yalign=0)
-        lbl_support_title.set_text("        Discord: ")
+        lbl_support_title.set_markup("<b>Discord    </b>")
 
         lbl_support_value = Gtk.Label(xalign=0, yalign=0)
-        lbl_support_value.set_markup("<a href=''>%s</a>" % app_discord)
+        lbl_support_value.set_markup("<a href='%s'>%s</a>" % (app_discord, app_discord))
 
         lbl_website_title = Gtk.Label(xalign=0, yalign=0)
-        lbl_website_title.set_text("        ArcoLinux website: ")
+        lbl_website_title.set_markup("<b>ArcoLinux website  </b>")
 
         lbl_website_value = Gtk.Label(xalign=0, yalign=0)
-        lbl_website_value.set_markup("<a href=''>%s</a>" % app_website)
+        lbl_website_value.set_markup("<a href='%s'>%s</a>" % (app_website, app_website))
 
         lbl_github_title = Gtk.Label(xalign=0, yalign=0)
-        lbl_github_title.set_text("        GitHub: ")
+        lbl_github_title.set_markup("<b>GitHub  </b>")
 
         lbl_github_value = Gtk.Label(xalign=0, yalign=0)
-        lbl_github_value.set_markup("<a href=''>%s</a>" % app_github)
+        lbl_github_value.set_markup("<a href='%s'>%s</a>" % (app_github, app_github))
 
         grid_support.attach(lbl_support_title, 0, 2, 1, 1)
 

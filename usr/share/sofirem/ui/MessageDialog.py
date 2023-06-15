@@ -2,6 +2,7 @@
 
 import os
 import gi
+import Functions as fn
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
@@ -24,7 +25,7 @@ class MessageDialog(Gtk.Dialog):
         headerbar.set_show_close_button(True)
 
         self.set_resizable(True)
-        self.set_modal(True)
+
         self.set_border_width(10)
 
         self.set_titlebar(headerbar)
@@ -73,6 +74,11 @@ class MessageDialog(Gtk.Dialog):
             textview.set_hexpand(True)
 
             msg_buffer = textview.get_buffer()
+            msg_buffer.insert(
+                msg_buffer.get_end_iter(),
+                "Event timestamp = %s\n"
+                % fn.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            )
             msg_buffer.insert(msg_buffer.get_end_iter(), "%s\n" % first_msg)
             msg_buffer.insert(msg_buffer.get_end_iter(), "%s\n" % secondary_msg)
 

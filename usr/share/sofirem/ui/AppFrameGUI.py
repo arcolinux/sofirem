@@ -7,7 +7,7 @@ import Functions as fn
 
 
 class AppFrameGUI:
-    def build_ui_frame(self, Gtk, vbox_stack, category, packages_lst):
+    def build_ui_frame(self, Gtk, vbox_stack, category, packages_list):
         try:
             # Lets set some variables that we know we will need later
             # hboxes and items to make the page look sensible
@@ -64,7 +64,7 @@ class AppFrameGUI:
 
             # store unique subcategory names into a dictionary
 
-            for package in packages_lst:
+            for package in packages_list:
                 subcats[package.subcategory] = package
 
             # we now iterate across the dictionary keys
@@ -80,7 +80,7 @@ class AppFrameGUI:
                 vbox_stacknames.append(subcat)
                 # iterate across a list of packages
 
-                for package in packages_lst:
+                for package in packages_list:
                     if package.subcategory == subcat:
                         page = vbox_stacks.pop()
 

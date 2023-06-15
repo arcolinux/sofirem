@@ -4,13 +4,11 @@ import gi
 import os
 import Functions as fn
 import signal
-import datetime
 
 import subprocess
 from Functions import os
 from queue import Queue
 from time import sleep
-from datetime import datetime
 import sys
 import time
 
@@ -24,6 +22,7 @@ from ui.MessageDialog import MessageDialog
 from ui.PacmanLogWindow import PacmanLogWindow
 from ui.PackageListDialog import PackageListDialog
 from ui.ProgressDialog import ProgressDialog
+from ui.ISOPackagesWindow import ISOPackagesWindow
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GdkPixbuf, Pango, GLib
@@ -55,6 +54,9 @@ class Main(Gtk.Window):
 
     # Create a queue for storing Pacman log file contents
     pacmanlog_queue = Queue()
+
+    # Create a queue for storing packages waiting behind an in-progress pacman transaction
+    pkg_holding_queue = Queue()
 
     def __init__(self):
         try:
@@ -110,6 +112,14 @@ class Main(Gtk.Window):
             print(
                 "---------------------------------------------------------------------------"
             )
+
+            splash_screen = SplashScreen()
+
+            while Gtk.events_pending():
+                Gtk.main_iteration()
+
+            sleep(3)
+            splash_screen.destroy()
 
             # Fetch list of packages already installed before the app makes changes
             fn.create_packages_log()
@@ -193,17 +203,10 @@ class Main(Gtk.Window):
 
                     fn.logger.info("Total packages = %s" % total_packages)
 
-                    splash_screen = SplashScreen()
-
-                    while Gtk.events_pending():
-                        Gtk.main_iteration()
-
-                    sleep(3)
-                    splash_screen.destroy()
-
                     fn.logger.info("Setting up GUI")
 
                     GUI.setup_gui(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango)
+
                 else:
                     sys.exit(1)
 
@@ -364,6 +367,9 @@ class Main(Gtk.Window):
     # =====================================================
 
     def on_close(self, widget, data):
+        # make a final installed packages file inside /var/log/sofirem/$DATE
+        # this allows a before/after comparison
+        fn.create_packages_log()
         if os.path.exists(fn.sofirem_lockfile):
             os.unlink(fn.sofirem_lockfile)
 
@@ -395,123 +401,170 @@ class Main(Gtk.Window):
 
     def app_toggle(self, widget, active, package):
         # switch widget is currently toggled off
+
         if widget.get_state() == False and widget.get_active() == True:
             if len(package.name) > 0:
-                # check there is no pacman lockfile before continuing
-                if fn.check_pacman_lockfile() is False:
-                    widget.set_sensitive(False)
+                inst_str = [
+                    "pacman",
+                    "-S",
+                    package.name,
+                    "--needed",
+                    "--noconfirm",
+                ]
 
-                    self.switch_pkg_version.set_sensitive(False)
-                    self.switch_arco_keyring.set_sensitive(False)
-                    self.switch_arco_mirrorlist.set_sensitive(False)
-
-                    package_metadata = fn.get_package_information(package.name)
-
-                    if (
-                        type(package_metadata) is str
-                        and package_metadata.strip()
-                        == "error: package '%s' was not found" % package.name
-                    ):
-                        self.package_found = False
-                        fn.logger.warning(
-                            "The package %s was not found in any configured Pacman repositories"
-                            % package.name
-                        )
-                        fn.logger.warning("Package install cannot continue")
+                if self.show_progress_dialog is True:
+                    if fn.check_pacman_lockfile():
+                        widget.set_state(False)
+                        widget.set_active(False)
+                        proc = fn.get_pacman_process()
 
                         message_dialog = MessageDialog(
-                            "Error",
-                            "Pacman repository error: package '%s' was not found"
-                            % package.name,
-                            "Sofirem cannot process the request",
-                            "Are the correct pacman mirrorlists configured ?",
-                            "error",
+                            "Warning",
+                            "Sofirem cannot proceed pacman lockfile found",
+                            "Pacman cannot lock the db, a lockfile is found inside %s"
+                            % fn.pacman_lockfile,
+                            "Pacman is running: %s" % proc,
+                            "warning",
                             False,
                         )
+
                         message_dialog.show_all()
                         message_dialog.run()
                         message_dialog.hide()
-
-                        widget.set_state(False)
-                        widget.set_active(False)
+                        return True
                     else:
-                        widget.set_active(True)
-                        widget.set_state(True)
+                        package_metadata = fn.get_package_information(package.name)
 
-                        fn.logger.info("Package to install : %s" % package.name)
+                        if (
+                            type(package_metadata) is str
+                            and package_metadata.strip()
+                            == "error: package '%s' was not found" % package.name
+                        ):
+                            self.package_found = False
+                            fn.logger.warning(
+                                "The package %s was not found in any configured Pacman repositories"
+                                % package.name
+                            )
+                            fn.logger.warning("Package install cannot continue")
 
-                        inst_str = [
-                            "pacman",
-                            "-S",
-                            package.name,
-                            "--needed",
-                            "--noconfirm",
-                        ]
+                            message_dialog = MessageDialog(
+                                "Error",
+                                "Pacman repository error: package '%s' was not found"
+                                % package.name,
+                                "Sofirem cannot process the request",
+                                "Are the correct pacman mirrorlists configured ?",
+                                "error",
+                                False,
+                            )
+                            message_dialog.show_all()
+                            message_dialog.run()
+                            message_dialog.hide()
 
-                        progress_dialog = ProgressDialog(
-                            "install",
-                            package,
-                            " ".join(inst_str),
-                            package_metadata,
-                        )
-                        if self.show_progress_dialog is True:
-                            progress_dialog.show_all()
-                        self.pkg_queue.put(
-                            (
-                                package,
+                            widget.set_state(False)
+                            widget.set_active(False)
+
+                            return True
+                        else:
+                            widget.set_state(True)
+                            widget.set_active(True)
+
+                            progress_dialog = ProgressDialog(
                                 "install",
-                                widget,
-                                inst_str,
-                                progress_dialog,
-                            ),
-                        )
+                                package,
+                                " ".join(inst_str),
+                                package_metadata,
+                            )
 
+                            progress_dialog.show_all()
+
+                            self.pkg_queue.put(
+                                (
+                                    package,
+                                    "install",
+                                    widget,
+                                    inst_str,
+                                    progress_dialog,
+                                ),
+                            )
+
+                            th = fn.threading.Thread(
+                                name="thread_pkginst",
+                                target=fn.install,
+                                args=(self,),
+                                daemon=True,
+                            )
+
+                            th.start()
+                            fn.logger.debug("Package-install thread started")
+
+                else:
+                    progress_dialog = None
+                    widget.set_sensitive(False)
+
+                widget.set_active(True)
+                widget.set_state(True)
+
+                fn.logger.info("Package to install : %s" % package.name)
+
+                # another pacman transaction is running, add items to the holding queue
+                if (
+                    fn.check_pacman_lockfile() is True
+                    and self.show_progress_dialog is False
+                ):
+                    self.pkg_holding_queue.put(
+                        (
+                            package,
+                            "install",
+                            widget,
+                            inst_str,
+                            progress_dialog,
+                        ),
+                    )
+
+                    if fn.is_thread_alive("thread_check_holding_queue") is False:
                         th = fn.threading.Thread(
-                            name="thread_pkginst",
-                            target=fn.install,
+                            target=fn.check_holding_queue,
+                            name="thread_check_holding_queue",
+                            daemon=True,
                             args=(self,),
                         )
 
                         th.start()
-                        fn.logger.debug("Package-install thread started")
-                else:
-                    widget.set_state(False)
-                    widget.set_active(False)
-                    proc = fn.get_pacman_process()
-
-                    message_dialog = MessageDialog(
-                        "Warning",
-                        "Sofirem cannot proceed pacman lockfile found",
-                        "Pacman cannot lock the db, a lockfile is found inside %s"
-                        % fn.pacman_lockfile,
-                        "Pacman is running: %s" % proc,
-                        "warning",
-                        False,
+                        fn.logger.debug("Check-holding-queue thread started")
+                elif self.show_progress_dialog is False:
+                    self.pkg_queue.put(
+                        (
+                            package,
+                            "install",
+                            widget,
+                            inst_str,
+                            progress_dialog,
+                        ),
                     )
 
-                    message_dialog.show_all()
-                    message_dialog.run()
-                    message_dialog.hide()
+                    th = fn.threading.Thread(
+                        name="thread_pkginst",
+                        target=fn.install,
+                        args=(self,),
+                        daemon=True,
+                    )
+
+                    th.start()
+                    fn.logger.debug("Package-install thread started")
 
         # switch widget is currently toggled on
         if widget.get_state() == True and widget.get_active() == False:
             # Uninstall the package
-            # widget.set_active(False)
-            # widget.set_state(False)
+
             if len(package.name) > 0:
-                if fn.check_pacman_lockfile() is False:
-                    widget.set_active(False)
-                    widget.set_state(False)
-                    widget.set_sensitive(False)
+                uninst_str = ["pacman", "-Rs", package.name, "--noconfirm"]
+                widget.set_active(False)
+                widget.set_state(False)
 
-                    self.switch_pkg_version.set_sensitive(False)
-                    self.switch_arco_keyring.set_sensitive(False)
-                    self.switch_arco_mirrorlist.set_sensitive(False)
+                fn.logger.info("Package to remove : %s" % package.name)
 
-                    fn.logger.info("Package to remove : %s" % package.name)
+                if self.show_progress_dialog is True:
                     package_metadata = fn.get_package_information(package.name)
-
-                    uninst_str = ["pacman", "-Rs", package.name, "--noconfirm"]
 
                     progress_dialog = ProgressDialog(
                         "uninstall",
@@ -519,46 +572,32 @@ class Main(Gtk.Window):
                         " ".join(uninst_str),
                         package_metadata,
                     )
-                    if self.show_progress_dialog is True:
-                        progress_dialog.show_all()
 
-                    self.pkg_queue.put(
-                        (
-                            package,
-                            "uninstall",
-                            widget,
-                            uninst_str,
-                            progress_dialog,
-                        ),
-                    )
-
-                    th = fn.threading.Thread(
-                        name="thread_pkgrem",
-                        target=fn.uninstall,
-                        args=(self,),
-                    )
-
-                    th.start()
+                    progress_dialog.show_all()
                 else:
-                    widget.set_state(True)
-                    widget.set_active(True)
-                    proc = fn.get_pacman_process()
+                    progress_dialog = None
 
-                    message_dialog = MessageDialog(
-                        "Warning",
-                        "Sofirem cannot proceed pacman lockfile found",
-                        "Pacman cannot lock the db, a lockfile is found inside %s"
-                        % fn.pacman_lockfile,
-                        "Pacman is running: %s" % proc,
-                        "warning",
-                        False,
-                    )
-                    message_dialog.show_all()
-                    message_dialog.run()
-                    message_dialog.hide()
+                self.pkg_queue.put(
+                    (
+                        package,
+                        "uninstall",
+                        widget,
+                        uninst_str,
+                        progress_dialog,
+                    ),
+                )
 
-        # fn.get_current_installed()
-        # fn.print_threads_alive()
+                th = fn.threading.Thread(
+                    name="thread_pkgrem",
+                    target=fn.uninstall,
+                    args=(self,),
+                    daemon=True,
+                )
+
+                th.start()
+                fn.logger.debug("Package-uninstall thread started")
+
+        # fn.print_running_threads()
 
         # return True to prevent the default handler from running
         return True
@@ -583,6 +622,11 @@ class Main(Gtk.Window):
     # ================================================================
     #                   SETTINGS
     # ================================================================
+
+    def on_arcolinux_iso_packages_clicked(self, widget):
+        fn.logger.debug("Showing ArcoLinux ISO Packages window")
+        arcolinux_iso_packages_window = ISOPackagesWindow()
+        arcolinux_iso_packages_window.show()
 
     def on_about_app_clicked(self, widget):
         fn.logger.debug("Showing About dialog")

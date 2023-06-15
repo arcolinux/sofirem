@@ -519,6 +519,11 @@ def setup_headerbar(self, Gtk):
         btn_about_app.connect("clicked", self.on_about_app_clicked)
         btn_about_app.set_alignment(xalign=0, yalign=0)
 
+        # button to show iso package lists window
+        btn_iso_packages_list = Gtk.ModelButton(label="Explore ArcoLinux ISO Packages")
+        btn_iso_packages_list.connect("clicked", self.on_arcolinux_iso_packages_clicked)
+        btn_iso_packages_list.set_alignment(xalign=0, yalign=0)
+
         if self.display_versions == True:
             self.switch_pkg_version.set_active(True)
         else:
@@ -576,37 +581,41 @@ def setup_headerbar(self, Gtk):
         lbl_pkg_version = Gtk.Label(xalign=0, yalign=0)
         lbl_pkg_version.set_text("Display Package Version")
 
-        hbox1 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox1.set_border_width(5)
+        hbox1 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox1.set_border_width(1)
         hbox1.pack_start(lbl_pkg_version, True, True, 1)
         hbox1.pack_start(self.switch_pkg_version, True, True, 1)
 
-        hbox2 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox2.set_border_width(5)
+        hbox2 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox2.set_border_width(1)
         hbox2.pack_start(lbl_arco_keyring, True, True, 1)
         hbox2.pack_start(self.switch_arco_keyring, True, True, 1)
 
-        hbox3 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox3.set_border_width(5)
+        hbox3 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox3.set_border_width(1)
         hbox3.pack_start(lbl_arco_mirrorlist, True, True, 1)
         hbox3.pack_start(self.switch_arco_mirrorlist, True, True, 1)
 
-        hbox4 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox4.set_border_width(5)
+        hbox4 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox4.set_border_width(1)
         hbox4.pack_start(lbl_package_progress, True, True, 1)
         hbox4.pack_start(self.switch_package_progress, True, True, 1)
 
-        hbox5 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox5.set_border_width(5)
+        hbox5 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox5.set_border_width(1)
         hbox5.pack_start(self.btn_pacmanlog, True, True, 1)
 
-        hbox6 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox6.set_border_width(5)
+        hbox6 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox6.set_border_width(1)
         hbox6.pack_start(btn_packages_export, True, True, 1)
 
-        hbox7 = Gtk.Box(spacing=10, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox7.set_border_width(5)
-        hbox7.pack_start(btn_about_app, True, True, 1)
+        hbox7 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox7.set_border_width(1)
+        hbox7.pack_start(btn_iso_packages_list, True, True, 1)
+
+        hbox8 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
+        hbox8.set_border_width(1)
+        hbox8.pack_start(btn_about_app, True, True, 1)
 
         vbox.pack_start(hbox1, True, True, 1)
         vbox.pack_start(hbox2, True, True, 1)
@@ -615,6 +624,7 @@ def setup_headerbar(self, Gtk):
         vbox.pack_start(hbox5, True, True, 1)
         vbox.pack_start(hbox6, True, True, 1)
         vbox.pack_start(hbox7, True, True, 1)
+        vbox.pack_start(hbox8, True, True, 1)
 
         self.popover.add(vbox)
         self.popover.set_position(Gtk.PositionType.BOTTOM)

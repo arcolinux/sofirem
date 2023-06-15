@@ -205,7 +205,8 @@ class ProgressDialog(Gtk.Dialog):
 
             lbl_package_url_value = Gtk.Label(xalign=0)
             lbl_package_url_value.set_markup(
-                "<a href=''>%s</a>" % package_metadata["url"]
+                "<a href='%s'>%s</a>"
+                % (package_metadata["url"], package_metadata["url"])
             )
             vbox_package_url.pack_start(lbl_package_url_title, True, True, 0)
             vbox_package_url.pack_start(lbl_package_url_value, True, True, 0)
