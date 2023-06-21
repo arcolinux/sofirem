@@ -34,7 +34,9 @@
     - ttf-hellvetica
     - ttf-ibm-plex
     - ttf-inconsolata
+    - ttf-iosevka-nerd
     - ttf-jetbrains-mono
+    - ttf-jetbrains-mono-nerd
     - ttf-joypixels
     - ttf-lato
     - ttf-liberation
@@ -50,4 +52,5 @@
     - ttf-proggy-clean
     - ttf-roboto
     - ttf-roboto-mono
+    - ttf-sourcecodepro-nerd
     - ttf-ubuntu-font-family
