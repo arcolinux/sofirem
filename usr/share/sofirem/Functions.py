@@ -12,9 +12,11 @@ import subprocess
 import threading
 import gi
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import shutil
 from threading import Thread
 from Package import Package
+from Settings import Settings
 from ui.MessageDialog import MessageDialog
 from distro import id
 from os import makedirs
@@ -35,7 +37,6 @@ sudo_username = os.getlogin()
 home = "/home/" + str(sudo_username)
 path_dir_cache = base_dir + "/cache/"
 packages = []
-debug = False
 distr = id()
 sofirem_lockfile = "/tmp/sofirem.lock"
 sofirem_pidfile = "/tmp/sofirem.pid"
@@ -47,6 +48,7 @@ pacman_conf = "/etc/pacman.conf"
 pacman_conf_backup = "/etc/pacman.conf.bak"
 pacman_logfile = "/var/log/pacman.log"
 pacman_lockfile = "/var/lib/pacman/db.lck"
+
 
 arco_test_repo = [
     "#[arcolinux_repo_testing]",
@@ -73,11 +75,12 @@ arco_xlrepo = [
 ]
 
 
-log_dir = "/var/log/sofirem/%s/" % datetime.now().strftime("%Y-%m-%d")
-event_log_file = "%s/%s-event.log" % (
-    log_dir,
-    datetime.now().strftime("%H-%M-%S"),
-)
+log_dir = "/var/log/sofirem/"
+config_dir = "%s/.config/sofirem" % home
+config_file = "%s/sofirem.yaml" % config_dir
+
+
+event_log_file = "%s/event.log" % log_dir
 
 export_dir = "%s/sofirem-exports" % home
 
@@ -105,7 +108,7 @@ def permissions(dst):
         logger.error(e)
 
 
-# Create log directory and export directory
+# Create log, export, conf directory
 try:
     if not os.path.exists(log_dir):
         makedirs(log_dir)
@@ -113,47 +116,79 @@ try:
     if not os.path.exists(export_dir):
         makedirs(export_dir)
 
+    if not os.path.exists(config_dir):
+        makedirs(config_dir)
+
     permissions(export_dir)
+    permissions(config_dir)
 
     print("[INFO] Log directory = %s" % log_dir)
     print("[INFO] Export directory = %s" % export_dir)
+    print("[INFO] Config directory = %s" % config_dir)
 
 
 except os.error as oe:
     print("[ERROR] Exception in setup log/export directory: %s" % oe)
     sys.exit(1)
 
-logger = logging.getLogger("logger")
+# read in conf file from $HOME/.config/sofirem/sofirem.yaml
+# initialize logger
+try:
+    settings = Settings(False, False)
+    settings_config = settings.read_config_file()
 
-logger.setLevel(logging.DEBUG)
-# create console handler and set level to debug
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+    logger = logging.getLogger("logger")
 
-fh = logging.FileHandler(event_log_file, mode="a", encoding="utf-8", delay=False)
-fh.setLevel(level=logging.INFO)
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
 
-# create formatter
-formatter = logging.Formatter(
-    "%(asctime)s:%(levelname)s > %(message)s", "%Y-%m-%d %H:%M:%S"
-)
-# add formatter to ch
-ch.setFormatter(formatter)
-fh.setFormatter(formatter)
+    # rotate the events log every Friday
+    tfh = TimedRotatingFileHandler(
+        event_log_file, encoding="utf-8", delay=False, when="W4"
+    )
 
-# add ch to logger
-logger.addHandler(ch)
+    if settings_config:
+        debug_logging_enabled = None
+        debug_logging_enabled = settings_config["Debug Logging"]
 
-# add fh to logger
-logger.addHandler(fh)
+        if debug_logging_enabled is not None and debug_logging_enabled is True:
+            logger.setLevel(logging.DEBUG)
+            ch.setLevel(logging.DEBUG)
+            tfh.setLevel(level=logging.DEBUG)
+
+        else:
+            logger.setLevel(logging.INFO)
+            ch.setLevel(logging.INFO)
+            tfh.setLevel(level=logging.INFO)
+    else:
+        logger.setLevel(logging.INFO)
+        ch.setLevel(logging.INFO)
+        tfh.setLevel(level=logging.INFO)
+
+    # create formatter
+    formatter = logging.Formatter(
+        "%(asctime)s:%(levelname)s > %(message)s", "%Y-%m-%d %H:%M:%S"
+    )
+    # add formatter to ch
+    ch.setFormatter(formatter)
+    tfh.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(ch)
+
+    # add fh to logger
+    logger.addHandler(tfh)
+
+except Exception as e:
+    print("[ERROR] Failed to setup logger, exception: %s" % e)
 
 
-# a before state of packages
-def create_packages_log():
+# on app close create file of installed packages
+def on_close_create_packages_file():
     try:
-        logger.info("Creating a list of currently installed packages")
-        packages_log = "%s-packages.log" % datetime.now().strftime("%H-%M-%S")
-        logger.info("Saving in %s" % packages_log)
+        logger.info("App closing saving currently installed packages to file")
+        packages_file = "%s-packages.txt" % datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        logger.info("Saving in %s/%s" % (log_dir, packages_file))
         cmd = ["pacman", "-Q"]
 
         with subprocess.Popen(
@@ -163,16 +198,11 @@ def create_packages_log():
             bufsize=1,
             universal_newlines=True,
         ) as process:
-            with open("%s/%s" % (log_dir, packages_log), "w") as f:
-                f.write(
-                    "# Created by Sofirem on %s\n"
-                    % datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                )
-
+            with open("%s/%s" % (log_dir, packages_file), "w") as f:
                 for line in process.stdout:
                     f.write("%s" % line)
     except Exception as e:
-        logger.error("Exception in create_packages_log(): %s" % e)
+        logger.error("Exception in on_close_create_packages_file(): %s" % e)
 
 
 # =====================================================
@@ -228,7 +258,37 @@ def sync_package_db():
                 return out
 
     except Exception as e:
-        logger.error("Exception in sync(): %s" % e)
+        logger.error("Exception in sync_package_db(): %s" % e)
+
+
+# =====================================================
+#               PACMAN SYNC FILES DB
+# =====================================================
+
+
+def sync_file_db():
+    try:
+        sync_str = ["pacman", "-Fy"]
+        logger.info("Synchronizing pacman file database")
+        process_sync = subprocess.run(
+            sync_str,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=process_timeout,
+        )
+
+        if process_sync.returncode == 0:
+            return None
+        else:
+            if process_sync.stdout:
+                out = str(process_sync.stdout.decode("utf-8"))
+                logger.error(out)
+
+                return out
+
+    except Exception as e:
+        logger.error("Exception in sync_file_db(): %s" % e)
 
 
 # =====================================================
@@ -239,7 +299,7 @@ def sync_package_db():
 # this is run inside a separate thread
 def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
     try:
-        self.switch_pkg_version.set_sensitive(False)
+        self.switch_package_version.set_sensitive(False)
         self.switch_arco_keyring.set_sensitive(False)
         self.switch_arco_mirrorlist.set_sensitive(False)
 
@@ -259,12 +319,14 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
 
             self.in_progress = True
 
-            line = (
-                "Pacman is processing the %s of package %s \n\nCommand running = %s\n\n"
-                % (action, pkg.name, " ".join(cmd))
-            )
-
-            if progress_dialog is not None:
+            if (
+                progress_dialog is not None
+                and progress_dialog.pkg_dialog_closed is False
+            ):
+                line = (
+                    "Pacman is processing the %s of package %s \n\nCommand running = %s\n\n"
+                    % (action, pkg.name, " ".join(cmd))
+                )
                 GLib.idle_add(
                     update_progress_textview,
                     self,
@@ -307,32 +369,34 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
                         process_stdout_lst.append(line)
                     time.sleep(1)
 
+            returncode = None
             returncode = process.poll()
 
             # logger.debug("Pacman process return code = %s" % returncode)
 
-            logger.info(
-                "Pacman process completed for package = %s and action = %s"
-                % (pkg.name, action)
-            )
+            if returncode is not None:
+                logger.info("Pacman process completed running = %s" % cmd)
 
-            GLib.idle_add(
-                refresh_ui,
-                self,
-                action,
-                widget,
-                pkg,
-                progress_dialog,
-                process_stdout_lst,
-                priority=GLib.PRIORITY_DEFAULT,
-            )
+                GLib.idle_add(
+                    refresh_ui,
+                    self,
+                    action,
+                    widget,
+                    pkg,
+                    progress_dialog,
+                    process_stdout_lst,
+                    priority=GLib.PRIORITY_DEFAULT,
+                )
+            else:
+                # an error happened during the pacman transaction
+                logger.error("Pacman process failed when running %s" % cmd)
 
     except TimeoutError as t:
         logger.error("TimeoutError in %s start_subprocess(): %s" % (action, t))
         process.terminate()
         if progress_dialog is not None:
             progress_dialog.btn_package_progress_close.set_sensitive(True)
-        self.switch_pkg_version.set_sensitive(True)
+        self.switch_package_version.set_sensitive(True)
         self.switch_arco_keyring.set_sensitive(True)
         self.switch_arco_mirrorlist.set_sensitive(True)
 
@@ -341,7 +405,7 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
         process.terminate()
         if progress_dialog is not None:
             progress_dialog.btn_package_progress_close.set_sensitive(True)
-        self.switch_pkg_version.set_sensitive(True)
+        self.switch_package_version.set_sensitive(True)
         self.switch_arco_keyring.set_sensitive(True)
         self.switch_arco_mirrorlist.set_sensitive(True)
 
@@ -349,7 +413,7 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
 # refresh ui components, once the process completes
 # show notification dialog to user if errors are encountered during package install/uninstall
 def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
-    self.switch_pkg_version.set_sensitive(True)
+    self.switch_package_version.set_sensitive(True)
     self.switch_arco_keyring.set_sensitive(True)
     self.switch_arco_mirrorlist.set_sensitive(True)
 
@@ -435,8 +499,8 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
                 )
 
                 message_dialog.show_all()
-                # message_dialog.run()
-                # message_dialog.hide()
+                result = message_dialog.run()
+                message_dialog.destroy()
         elif progress_dialog is None or progress_dialog.pkg_dialog_closed is True:
             # the package progress dialog has been closed, but notify user package failed to install
 
@@ -450,7 +514,7 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
 
                 if progress_dialog is None:
                     logger.debug("Adding package to holding queue")
-                    if self.show_progress_dialog is False:
+                    if self.display_package_progress is False:
                         inst_str = [
                             "pacman",
                             "-S",
@@ -486,11 +550,15 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
                     )
 
                     message_dialog.show_all()
-                    # message_dialog.run()
-                    # message_dialog.hide()
+                    result = message_dialog.run()
+                    message_dialog.destroy()
 
                     # progress dialog is closed show message dialog with error
             elif "error: target not found: %s\n" % pkg.name in process_stdout_lst:
+                switch.set_sensitive(True)
+                switch.set_state(False)
+                switch.set_active(False)
+
                 message_dialog = MessageDialog(
                     "Error",
                     "Pacman repository error: package '%s' was not found" % pkg.name,
@@ -501,6 +569,8 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
                 )
 
                 message_dialog.show_all()
+                result = message_dialog.run()
+                message_dialog.destroy()
 
             else:
                 # logger.debug(" ".join(process_stdout_lst))
@@ -519,8 +589,8 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
                 )
 
                 message_dialog.show_all()
-                # message_dialog.run()
-                # message_dialog.hide()
+                result = message_dialog.run()
+                message_dialog.destroy()
 
     if installed is False and action == "uninstall":
         logger.debug("Toggle switch state = False")
@@ -590,34 +660,7 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
                 "error: failed to init transaction (unable to lock database)\n"
                 in process_stdout_lst
             ):
-                # proc = get_pacman_process()
-                # if proc is not None and len(proc) > 0:
-                #     message_dialog = MessageDialog(
-                #         "Warning",
-                #         "Sofirem cannot proceed pacman lockfile found",
-                #         "Pacman cannot lock the db, a lockfile is found inside %s"
-                #         % pacman_lockfile,
-                #         "Process running = %s" % proc,
-                #         "warning",
-                #         False,
-                #     )
-                #     message_dialog.show_all()
-                #     message_dialog.run()
-                #     message_dialog.hide()
-                # else:
-                #     message_dialog = MessageDialog(
-                #         "Warning",
-                #         "Sofirem cannot proceed pacman lockfile found",
-                #         "Pacman cannot lock the db, a lockfile is found inside %s"
-                #         % pacman_lockfile,
-                #         "",
-                #         "warning",
-                #         False,
-                #     )
-                #     message_dialog.show_all()
-                #     message_dialog.run()
-                #     message_dialog.hide()
-                logger.debug(" ".join(process_stdout_lst))
+                logger.error(" ".join(process_stdout_lst))
 
             else:
                 message_dialog = MessageDialog(
@@ -630,8 +673,8 @@ def refresh_ui(self, action, switch, pkg, progress_dialog, process_stdout_lst):
                 )
 
                 message_dialog.show_all()
-                # message_dialog.run()
-                # message_dialog.hide()
+                result = message_dialog.run()
+                message_dialog.destroy()
 
 
 # update progress textview using stdout from the pacman process running
@@ -733,8 +776,8 @@ def uninstall(self):
             )
 
             # is there a pacman lockfile, wait for it before uninstalling
-            while check_pacman_lockfile():
-                time.sleep(0.2)
+            # while check_pacman_lockfile():
+            #     time.sleep(0.2)
 
             th_subprocess_uninstall.start()
 
@@ -810,10 +853,9 @@ def store_packages():
                         # add the package to the packages list
 
                         package_name = line.strip("    - ").strip()
+
                         # get the package description
                         package_desc = obtain_pkg_description(package_name)
-
-                        # get the package version, lookup dictionary
 
                         package_version = "Unknown"
 
@@ -873,10 +915,42 @@ def store_packages():
 
         sorted_dict = dict(sorted(category_dict.items()))
 
+        if sorted_dict is None:
+            logger.error(
+                "An error occurred during sort of stored packages in store_packages()"
+            )
+
         return sorted_dict
     except Exception as e:
-        print("Exception in storePackages() : %s" % e)
+        logger.error("Exception in store_packages() : %s" % e)
         sys.exit(1)
+
+
+def get_package_description(package):
+    query_str = ["pacman", "-Si", package]
+
+    try:
+        with subprocess.Popen(
+            query_str,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            while True:
+                if process.poll() is not None:
+                    break
+
+            returncode = None
+            returncode = process.poll()
+
+            if returncode is not None:
+                for line in process.stdout:
+                    if "Description            :" in line.strip():
+                        return line.replace(" ", "").split("Description:")[1].strip()
+
+    except Exception as e:
+        logger.error("Exception in get_package_description(): %s" % e)
 
 
 # =====================================================
@@ -934,7 +1008,7 @@ def get_installed_package_data():
     query_str = ["pacman", "-Qi"]
 
     try:
-        installed_packages_lst = []
+        installed_packages_list = []
         pkg_name = None
         pkg_version = None
         pkg_install_date = None
@@ -971,7 +1045,7 @@ def get_installed_package_data():
                             pkg_latest_version = i["version"]
                             break
 
-                    installed_packages_lst.append(
+                    installed_packages_list.append(
                         (
                             pkg_name,
                             pkg_version,
@@ -981,10 +1055,34 @@ def get_installed_package_data():
                         )
                     )
 
-        return installed_packages_lst
+        return installed_packages_list
 
     except Exception as e:
         logger.error("Exception in get_installed_package_data() : %s" % e)
+
+
+# get list of files installed by a package
+def get_package_files(package_name):
+    try:
+        query_str = ["pacman", "-Fl", package_name]
+        process = subprocess.run(
+            query_str,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=process_timeout,
+        )
+
+        if process.returncode == 0:
+            package_files = []
+            for line in process.stdout.decode("utf-8").splitlines():
+                package_files.append((line.split(" ")[1], None))
+
+            return package_files
+        else:
+            return None
+    except Exception as e:
+        logger.error("Exception in get_package_files(): %s" % e)
 
 
 # get key package information which is to be shown inside ProgressDialog
@@ -1008,17 +1106,11 @@ def get_package_information(package_name):
         pkg_packager = "Unknown"
         package_metadata = {}
 
-        # if check_package_installed(package_name):
-        #     query_str = ["pacman", "-Qii", package_name]
-        # else:
-        #     query_str = ["pacman", "-Sii", package_name]
-
-        query_local_str = ["pacman", "-Qi", package_name]
-
-        query_remote_str = ["pacman", "-Si", package_name]
+        query_local_cmd = ["pacman", "-Qi", package_name]
+        query_remote_cmd = ["pacman", "-Si", package_name]
 
         process_query_remote = subprocess.run(
-            query_remote_str,
+            query_remote_cmd,
             shell=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -1094,7 +1186,7 @@ def get_package_information(package_name):
             return package_metadata
         else:
             process_query_local = subprocess.run(
-                query_local_str,
+                query_local_cmd,
                 shell=False,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -1171,9 +1263,9 @@ def get_package_information(package_name):
 
                 return package_metadata
             else:
-                return str(process_query_local.stdout.decode("utf-8"))
+                return None
     except Exception as e:
-        logger.error("Exception in get_package_information(): %e" % e)
+        logger.error("Exception in get_package_information(): %s" % e)
 
 
 # =====================================================
@@ -1244,9 +1336,6 @@ def cache(package, path_dir_cache):
     try:
         # first we need to strip the new line escape sequence to ensure we don't get incorrect outcome
         pkg = package.strip()
-        # you can see all the errors here with the print command below
-        if debug is True:
-            print(pkg)
         # create the query
         query_str = ["pacman", "-Si", pkg, " --noconfirm"]
 
@@ -1259,8 +1348,6 @@ def cache(package, path_dir_cache):
 
         # validate the process result
         if process.returncode == 0:
-            if debug is True:
-                logger.debug("Return code: equals 0 " + str(process.returncode))
             # out, err = process.communicate()
 
             output = out.decode("utf-8")
@@ -1284,8 +1371,6 @@ def cache(package, path_dir_cache):
         # There are several packages that do not return a valid process return code
         # Cathing those manually via corrections folder
         if process.returncode != 0:
-            if debug is True:
-                print("Return code: " + str(process.returncode))
             exceptions = [
                 "florence",
                 "mintstick-bin",
@@ -1400,7 +1485,7 @@ def add_pacmanlog_queue(self):
         logger.debug("No new lines found inside the pacman log file")
 
 
-# update the textview called from a non-blocking thread
+# start log timer to update the textview called from a non-blocking thread
 def start_log_timer(self, window_pacmanlog):
     while True:
         if window_pacmanlog.start_logtimer is False:
@@ -2248,7 +2333,7 @@ def check_holding_queue(self):
             package,
             action,
             widget,
-            inst_str,
+            cmd_str,
             progress_dialog,
         ) = self.pkg_holding_queue.get()
 
@@ -2259,22 +2344,21 @@ def check_holding_queue(self):
                 # logger.debug("Pacman is processing a transaction")
                 time.sleep(0.2)
 
-            if action == "install":
-                th_subprocess_install = Thread(
-                    name="thread_subprocess",
-                    target=start_subprocess,
-                    args=(
-                        self,
-                        inst_str,
-                        progress_dialog,
-                        action,
-                        package,
-                        widget,
-                    ),
-                    daemon=True,
-                )
+            th_subprocess = Thread(
+                name="thread_subprocess",
+                target=start_subprocess,
+                args=(
+                    self,
+                    cmd_str,
+                    progress_dialog,
+                    action,
+                    package,
+                    widget,
+                ),
+                daemon=True,
+            )
 
-                th_subprocess_install.start()
+            th_subprocess.start()
 
         finally:
             self.pkg_holding_queue.task_done()

@@ -44,11 +44,11 @@ class PackageListDialog(Gtk.Dialog):
 
         # get a list of installed packages on the system
 
-        installed_packages_lst = fn.get_installed_package_data()
+        installed_packages_list = fn.get_installed_package_data()
 
-        if len(installed_packages_lst) > 0:
+        if len(installed_packages_list) > 0:
             self.set_title(
-                "Showing %s installed packages" % len(installed_packages_lst)
+                "Showing %s installed packages" % len(installed_packages_list)
             )
 
             search_entry = Gtk.SearchEntry()
@@ -59,7 +59,7 @@ class PackageListDialog(Gtk.Dialog):
             Gtk.Window.grab_focus(headerbar)
 
             treestore_packages = Gtk.TreeStore(str, str, str, str, str)
-            for item in sorted(installed_packages_lst):
+            for item in sorted(installed_packages_list):
                 treestore_packages.append(None, list(item))
 
             treeview_packages = Gtk.TreeView()
@@ -110,7 +110,7 @@ class PackageListDialog(Gtk.Dialog):
 
             btn_dialog_export = Gtk.Button(label="Export")
             btn_dialog_export.connect(
-                "clicked", self.on_dialog_export_clicked, installed_packages_lst
+                "clicked", self.on_dialog_export_clicked, installed_packages_list
             )
             btn_dialog_export.set_size_request(100, 30)
             btn_dialog_export.set_halign(Gtk.Align.END)
@@ -154,14 +154,14 @@ class PackageListDialog(Gtk.Dialog):
         self.hide()
         self.destroy()
 
-    def on_dialog_export_clicked(self, dialog, installed_packages_lst):
+    def on_dialog_export_clicked(self, dialog, installed_packages_list):
         try:
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(
                     "# Created by Sofirem on %s\n"
                     % fn.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 )
-                for package in sorted(installed_packages_lst):
+                for package in sorted(installed_packages_list):
                     f.write("%s\n" % (package[0]))
 
             if os.path.exists(filename):

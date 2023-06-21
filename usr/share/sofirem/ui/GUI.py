@@ -51,7 +51,16 @@ class GUI_Worker(Thread):
 
 class GUI:
     def setup_gui_search(
-        self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, search_results, search_term
+        self,
+        Gtk,
+        Gdk,
+        GdkPixbuf,
+        base_dir,
+        os,
+        Pango,
+        search_results,
+        search_term,
+        settings,
     ):
         try:
             # remove previous vbox
@@ -67,7 +76,7 @@ class GUI:
             #                       HeaderBar
             # =======================================================
 
-            setup_headerbar(self, Gtk)
+            setup_headerbar(self, Gtk, settings)
 
             # =======================================================
             #                       App Notifications
@@ -271,7 +280,7 @@ class GUI:
         except Exception as err:
             fn.logger.error("Exception in GUISearch(): %s" % err)
 
-    def setup_gui(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango):  # noqa
+    def setup_gui(self, Gtk, Gdk, GdkPixbuf, base_dir, os, Pango, settings):  # noqa
         try:
             # reset back to main box
             if self.search_activated:
@@ -286,7 +295,7 @@ class GUI:
             #                       HeaderBar
             # =======================================================
 
-            setup_headerbar(self, Gtk)
+            setup_headerbar(self, Gtk, settings)
 
             # =======================================================
             #                       App Notifications
@@ -476,7 +485,7 @@ class GUI:
 
 
 # setup headerbar including popover settings
-def setup_headerbar(self, Gtk):
+def setup_headerbar(self, Gtk, settings):
     try:
         header_bar_title = "Sofirem"
         headerbar = Gtk.HeaderBar()
@@ -485,63 +494,38 @@ def setup_headerbar(self, Gtk):
 
         self.set_titlebar(headerbar)
 
-        toolbuttonSettings = Gtk.ToolButton()
+        toolbutton = Gtk.ToolButton()
         # icon-name open-menu-symbolic / open-menu-symbolic.symbolic
-        toolbuttonSettings.set_icon_name("open-menu-symbolic.symbolic")
-        # toolbuttonSettings.set_icon_name(Gtk.STOCK_PREFERENCES)
-        toolbuttonSettings.connect("clicked", self.on_settings_clicked)
+        toolbutton.set_icon_name("open-menu-symbolic.symbolic")
 
-        headerbar.pack_end(toolbuttonSettings)
+        toolbutton.connect("clicked", self.on_settings_clicked)
+
+        headerbar.pack_end(toolbutton)
 
         self.popover = Gtk.Popover()
-        self.popover.set_relative_to(toolbuttonSettings)
+        self.popover.set_relative_to(toolbutton)
 
         vbox = Gtk.Box(spacing=0, orientation=Gtk.Orientation.VERTICAL)
         vbox.set_border_width(15)
 
+        # switches
+
         # switch to display package versions
-        self.switch_pkg_version = Gtk.Switch()
-        self.switch_pkg_version.set_halign(Gtk.Align(1))
+        self.switch_package_version = Gtk.Switch()
 
-        # button to open the pacman log monitoring dialog
-        self.btn_pacmanlog = Gtk.ModelButton(label="Open Pacman Log File")
-
-        self.btn_pacmanlog.connect("clicked", self.on_pacman_log_clicked)
-        self.btn_pacmanlog.set_alignment(xalign=0, yalign=0)
-
-        # button to export list of installed packages to disk
-        btn_packages_export = Gtk.ModelButton(label="Show Installed Packages")
-        btn_packages_export.connect("clicked", self.on_packages_export_clicked)
-        btn_packages_export.set_alignment(xalign=0, yalign=0)
-
-        # button to show about dialog
-        btn_about_app = Gtk.ModelButton(label="About Sofirem")
-        btn_about_app.connect("clicked", self.on_about_app_clicked)
-        btn_about_app.set_alignment(xalign=0, yalign=0)
-
-        # button to show iso package lists window
-        btn_iso_packages_list = Gtk.ModelButton(label="Explore ArcoLinux ISO Packages")
-        btn_iso_packages_list.connect("clicked", self.on_arcolinux_iso_packages_clicked)
-        btn_iso_packages_list.set_alignment(xalign=0, yalign=0)
+        if settings != None:
+            if settings["Display Package Versions"]:
+                self.display_versions = settings["Display Package Versions"]
 
         if self.display_versions == True:
-            self.switch_pkg_version.set_active(True)
+            self.switch_package_version.set_active(True)
         else:
-            self.switch_pkg_version.set_active(False)
+            self.switch_package_version.set_active(False)
 
-        self.switch_pkg_version.connect("notify::active", self.version_toggle)
+        self.switch_package_version.connect("notify::active", self.version_toggle)
 
+        # switch to import arcolinux keyring
         self.switch_arco_keyring = Gtk.Switch()
-        self.switch_arco_keyring.set_halign(Gtk.Align(1))
-
-        lbl_arco_keyring = Gtk.Label(xalign=0, yalign=0)
-        lbl_arco_keyring.set_text("Import ArcoLinux Keyring")
-
-        self.switch_arco_mirrorlist = Gtk.Switch()
-        self.switch_arco_mirrorlist.set_halign(Gtk.Align(1))
-
-        lbl_arco_mirrorlist = Gtk.Label(xalign=0, yalign=0)
-        lbl_arco_mirrorlist.set_text("Import ArcoLinux Mirrorlist")
 
         if (
             fn.check_package_installed("arcolinux-keyring") is False
@@ -554,6 +538,9 @@ def setup_headerbar(self, Gtk):
 
         self.switch_arco_keyring.connect("state-set", self.arco_keyring_toggle)
 
+        # switch to import arcolinix mirrorlist
+        self.switch_arco_mirrorlist = Gtk.Switch()
+
         if (
             fn.check_package_installed("arcolinux-mirrorlist-git") is False
             or fn.verify_arco_pacman_conf() is False
@@ -565,66 +552,165 @@ def setup_headerbar(self, Gtk):
 
         self.switch_arco_mirrorlist.connect("state-set", self.arco_mirrorlist_toggle)
 
-        # switch to display/hide package install/uninstall progress dialog
-
-        lbl_package_progress = Gtk.Label(xalign=0, yalign=0)
-        lbl_package_progress.set_text("Display Package Progress Window")
-
+        # switch to display package progress window
         self.switch_package_progress = Gtk.Switch()
-        self.switch_package_progress.set_halign(Gtk.Align(1))
-        self.switch_package_progress.set_active(True)
 
+        if settings != None:
+            if settings["Display Package Progress"]:
+                self.display_package_progress = settings["Display Package Progress"]
+
+        if self.display_package_progress == True:
+            self.switch_package_progress.set_active(True)
+        else:
+            self.switch_package_progress.set_active(False)
         self.switch_package_progress.connect(
             "notify::active", self.package_progress_toggle
         )
 
-        lbl_pkg_version = Gtk.Label(xalign=0, yalign=0)
-        lbl_pkg_version.set_text("Display Package Version")
+        # modalbuttons
 
-        hbox1 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox1.set_border_width(1)
-        hbox1.pack_start(lbl_pkg_version, True, True, 1)
-        hbox1.pack_start(self.switch_pkg_version, True, True, 1)
+        # button to open the pacman log monitoring dialog
+        self.modelbtn_pacmanlog = Gtk.ModelButton()
+        self.modelbtn_pacmanlog.connect("clicked", self.on_pacman_log_clicked)
+        self.modelbtn_pacmanlog.set_name("modelbtn_popover")
+        self.modelbtn_pacmanlog.props.centered = False
+        self.modelbtn_pacmanlog.props.text = "Open Pacman Log File"
 
-        hbox2 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox2.set_border_width(1)
-        hbox2.pack_start(lbl_arco_keyring, True, True, 1)
-        hbox2.pack_start(self.switch_arco_keyring, True, True, 1)
+        # button to display installed packages window
+        modelbtn_packages_export = Gtk.ModelButton()
+        modelbtn_packages_export.connect("clicked", self.on_packages_export_clicked)
+        modelbtn_packages_export.set_name("modelbtn_popover")
+        modelbtn_packages_export.props.centered = False
+        modelbtn_packages_export.props.text = "Show Installed Packages"
 
-        hbox3 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox3.set_border_width(1)
-        hbox3.pack_start(lbl_arco_mirrorlist, True, True, 1)
-        hbox3.pack_start(self.switch_arco_mirrorlist, True, True, 1)
+        # button to show about dialog
+        modelbtn_about_app = Gtk.ModelButton()
+        modelbtn_about_app.connect("clicked", self.on_about_app_clicked)
+        modelbtn_about_app.set_name("modelbtn_popover")
+        modelbtn_about_app.props.centered = False
+        modelbtn_about_app.props.text = "About Sofirem"
 
-        hbox4 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox4.set_border_width(1)
-        hbox4.pack_start(lbl_package_progress, True, True, 1)
-        hbox4.pack_start(self.switch_package_progress, True, True, 1)
+        # button to show iso package lists window
+        modelbtn_iso_packages_list = Gtk.ModelButton()
+        modelbtn_iso_packages_list.connect(
+            "clicked", self.on_arcolinux_iso_packages_clicked
+        )
+        modelbtn_iso_packages_list.set_name("modelbtn_popover")
+        modelbtn_iso_packages_list.props.centered = False
+        modelbtn_iso_packages_list.props.text = "Explore ArcoLinux ISO Packages"
 
-        hbox5 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox5.set_border_width(1)
-        hbox5.pack_start(self.btn_pacmanlog, True, True, 1)
+        # button to show package search window
+        modelbtn_package_search = Gtk.ModelButton()
+        modelbtn_package_search.connect("clicked", self.on_package_search_clicked)
+        modelbtn_package_search.set_name("modelbtn_popover")
+        modelbtn_package_search.props.centered = False
+        modelbtn_package_search.props.text = "Open Package Search"
 
-        hbox6 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox6.set_border_width(1)
-        hbox6.pack_start(btn_packages_export, True, True, 1)
+        # grid for the switch options
+        grid_switches = Gtk.Grid()
+        grid_switches.set_row_homogeneous(True)
 
-        hbox7 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox7.set_border_width(1)
-        hbox7.pack_start(btn_iso_packages_list, True, True, 1)
+        lbl_package_version = Gtk.Label(xalign=0)
+        lbl_package_version.set_text("Display Package Versions")
 
-        hbox8 = Gtk.Box(spacing=5, orientation=Gtk.Orientation.HORIZONTAL)
-        hbox8.set_border_width(1)
-        hbox8.pack_start(btn_about_app, True, True, 1)
+        lbl_package_version_padding = Gtk.Label(xalign=0)
+        lbl_package_version_padding.set_text("  ")
 
-        vbox.pack_start(hbox1, True, True, 1)
-        vbox.pack_start(hbox2, True, True, 1)
-        vbox.pack_start(hbox3, True, True, 1)
-        vbox.pack_start(hbox4, True, True, 1)
-        vbox.pack_start(hbox5, True, True, 1)
-        vbox.pack_start(hbox6, True, True, 1)
-        vbox.pack_start(hbox7, True, True, 1)
-        vbox.pack_start(hbox8, True, True, 1)
+        lbl_package_progress = Gtk.Label(xalign=0)
+        lbl_package_progress.set_text("Display Package Progress")
+
+        lbl_package_progress_padding = Gtk.Label(xalign=0)
+        lbl_package_progress_padding.set_text("  ")
+
+        lbl_arco_keyring = Gtk.Label(xalign=0)
+        lbl_arco_keyring.set_text("Import ArcoLinux Keyring")
+
+        lbl_arco_keyring_padding = Gtk.Label(xalign=0)
+        lbl_arco_keyring_padding.set_text("  ")
+
+        lbl_arco_mirrorlist = Gtk.Label(xalign=0)
+        lbl_arco_mirrorlist.set_text("Import ArcoLinux Mirrorlist")
+
+        lbl_arco_mirrorlist_padding = Gtk.Label(xalign=0)
+        lbl_arco_mirrorlist_padding.set_text("  ")
+
+        grid_switches.attach(lbl_package_version, 0, 1, 1, 1)
+        grid_switches.attach_next_to(
+            lbl_package_version_padding,
+            lbl_package_version,
+            Gtk.PositionType.RIGHT,
+            1,
+            1,
+        )
+
+        grid_switches.attach_next_to(
+            self.switch_package_version,
+            lbl_package_version_padding,
+            Gtk.PositionType.RIGHT,
+            1,
+            1,
+        )
+
+        grid_switches.attach(lbl_package_progress, 0, 2, 1, 1)
+        grid_switches.attach_next_to(
+            lbl_package_progress_padding,
+            lbl_package_progress,
+            Gtk.PositionType.RIGHT,
+            1,
+            1,
+        )
+
+        grid_switches.attach_next_to(
+            self.switch_package_progress,
+            lbl_package_progress_padding,
+            Gtk.PositionType.RIGHT,
+            1,
+            1,
+        )
+
+        grid_switches.attach(lbl_arco_keyring, 0, 3, 1, 1)
+        grid_switches.attach_next_to(
+            lbl_arco_keyring_padding,
+            lbl_arco_keyring,
+            Gtk.PositionType.RIGHT,
+            1,
+            1,
+        )
+
+        grid_switches.attach_next_to(
+            self.switch_arco_keyring,
+            lbl_arco_keyring_padding,
+            Gtk.PositionType.RIGHT,
+            1,
+            1,
+        )
+
+        grid_switches.attach(lbl_arco_mirrorlist, 0, 4, 1, 1)
+        grid_switches.attach_next_to(
+            lbl_arco_mirrorlist_padding,
+            lbl_arco_mirrorlist,
+            Gtk.PositionType.RIGHT,
+            1,
+            1,
+        )
+
+        grid_switches.attach_next_to(
+            self.switch_arco_mirrorlist,
+            lbl_arco_mirrorlist_padding,
+            Gtk.PositionType.RIGHT,
+            1,
+            1,
+        )
+
+        vbox_buttons = Gtk.Box(spacing=1, orientation=Gtk.Orientation.VERTICAL)
+        vbox_buttons.pack_start(self.modelbtn_pacmanlog, False, True, 0)
+        vbox_buttons.pack_start(modelbtn_packages_export, False, True, 0)
+        vbox_buttons.pack_start(modelbtn_iso_packages_list, False, True, 0)
+        vbox_buttons.pack_start(modelbtn_package_search, False, True, 0)
+        vbox_buttons.pack_start(modelbtn_about_app, False, True, 0)
+
+        vbox.pack_start(grid_switches, False, False, 0)
+        vbox.pack_start(vbox_buttons, False, False, 0)
 
         self.popover.add(vbox)
         self.popover.set_position(Gtk.PositionType.BOTTOM)

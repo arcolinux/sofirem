@@ -29,7 +29,6 @@ class MessageDialog(Gtk.Dialog):
         self.set_border_width(10)
 
         self.set_titlebar(headerbar)
-        # self.set_position(Gtk.WindowPosition.CENTER_ON_PARENT)
 
         btn_ok = Gtk.Button(label="OK")
         btn_ok.set_size_request(100, 30)
@@ -115,5 +114,5 @@ class MessageDialog(Gtk.Dialog):
 
 
 def on_message_dialog_ok_response(self, widget):
-    widget.hide()
+    # widget.hide()
     widget.destroy()

@@ -410,7 +410,11 @@ class ISOPackagesWindow(Gtk.Window):
 
             vbox_bottom = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
 
-            vbox_bottom.pack_start(grid_bottom, True, True, 1)
+            lbl_padding_bottom = Gtk.Label(xalign=0, yalign=0)
+            lbl_padding_bottom.set_text("")
+
+            vbox_bottom.pack_start(lbl_padding_bottom, False, True, 0)
+            vbox_bottom.pack_start(grid_bottom, False, True, 0)
 
             self.vbox_combo = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
