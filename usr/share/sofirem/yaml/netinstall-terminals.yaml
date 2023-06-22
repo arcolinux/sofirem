@@ -72,6 +72,7 @@
     - ufetch-git
     - ufetch-arco-git
     - unimatrix-git
+    - wttr
 - name: "Zsh"
   description: "Zsh"
   critical: false
