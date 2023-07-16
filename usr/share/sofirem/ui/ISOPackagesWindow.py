@@ -167,7 +167,7 @@ class ISOPackagesWindow(Gtk.Window):
 
                     lbl_github_source_value = Gtk.Label(xalign=0, yalign=0)
                     lbl_github_source_value.set_markup(
-                        "<a href=''>%s</a>" % self.github_source
+                        "<a href='%s'>%s</a>" % (self.github_source, self.github_source)
                     )
 
                     lbl_package_count_title = Gtk.Label(xalign=0, yalign=0)
