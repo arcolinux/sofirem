@@ -52,25 +52,25 @@ pacman_lockfile = "/var/lib/pacman/db.lck"
 
 arco_test_repo = [
     "#[arcolinux_repo_testing]",
-    "#SigLevel = Optional TrustedOnly",
+    "#SigLevel = PackageRequired DatabaseNever",
     "#Include = /etc/pacman.d/arcolinux-mirrorlist",
 ]
 
 arco_repo = [
     "[arcolinux_repo]",
-    "SigLevel = Optional TrustedOnly",
+    "SigLevel = PackageRequired DatabaseNever",
     "Include = /etc/pacman.d/arcolinux-mirrorlist",
 ]
 
 arco_3rd_party_repo = [
     "[arcolinux_repo_3party]",
-    "SigLevel = Optional TrustedOnly",
+    "SigLevel = PackageRequired DatabaseNever",
     "Include = /etc/pacman.d/arcolinux-mirrorlist",
 ]
 
 arco_xlrepo = [
     "[arcolinux_repo_xlarge]",
-    "SigLevel = Optional TrustedOnly",
+    "SigLevel = PackageRequired DatabaseNever",
     "Include = /etc/pacman.d/arcolinux-mirrorlist",
 ]
 
