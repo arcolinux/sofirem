@@ -72,6 +72,7 @@
     - gnome-software
     - gnome-software-packagekit-plugin
     - octopi
+    - octopi-notifier-qt5
     - pace
     - pace-git
     - pacui
