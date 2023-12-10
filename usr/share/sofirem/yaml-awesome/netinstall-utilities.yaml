@@ -70,7 +70,6 @@
     - bauh
     - flatpak
     - gnome-software
-    - gnome-software-packagekit-plugin
     - octopi
     - octopi-notifier-qt5
     - pace
@@ -87,6 +86,8 @@
     - snapd
     - synapse
     - topgrade
+    - topgrade-bin
+    - topgrade-git
     - trizen
     - ulauncher
     - xlunch-git
@@ -130,6 +131,9 @@
     - cpu-x
     - dmidecode
     - duf
+    - edid-decode-git
+    - fastfetch
+    - fastfetch-git
     - glances
     - gnome-disk-utility
     - gotop-bin

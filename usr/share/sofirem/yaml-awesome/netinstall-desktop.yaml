@@ -265,6 +265,46 @@
     - arcolinux-wallpapers-git
     - deepin
     - deepin-extra
+- name: "Desktop: Dk"
+  description: "Installs dk desktop"
+  critical: false
+  hidden: false
+  selected: false
+  packages:
+    - arcolinux-config-all-desktops-git
+    - arcolinux-dconf-all-desktops-git
+    - arcolinux-dk-git
+    - arcolinux-gtk3-sardi-arc-git
+    - arcolinux-local-xfce4-git
+    - archlinux-logout-git
+    - arcolinux-polybar-git
+    - arcolinux-rofi-git
+    - arcolinux-rofi-themes-git
+    - arcolinux-root-git
+    - archlinux-tweak-tool-git
+    - arcolinux-volumeicon-git
+    - arcolinux-wallpapers-git
+    - arcolinux-xfce-git
+    - dk
+    - dmenu
+    - feh
+    - lxappearance
+    - nerd-fonts-source-code-pro
+    - picom
+    - polkit-gnome
+    - polybar
+    - rofi
+    - sxhkd
+    - thunar
+    - thunar-archive-plugin
+    - thunar-volman
+    - volumeicon
+    - xfce4-notifyd
+    - xfce4-power-manager
+    - xfce4-screenshooter
+    - xfce4-settings
+    - xfce4-taskmanager
+    - xfce4-terminal
 - name: "Desktop: Dusk"
   description: "Installs dusk desktop"
   critical: false

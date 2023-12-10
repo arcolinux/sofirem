@@ -105,28 +105,6 @@
     - nvidia-dkms
     - nvidia-settings
     - nvidia-utils
-- name: "Nvidia-dkms for linux-xanmod-tt kernel"
-  description: "Installs the linux-xanmod-tt kernel"
-  critical: false
-  hidden: false
-  selected: false
-  packages:
-    - linux-xanmod-tt
-    - linux-xanmod-tt-headers
-    - nvidia-dkms
-    - nvidia-settings
-    - nvidia-utils
-- name: "Nvidia-dkms for linux-xanmod-anbox kernel"
-  description: "Installs the linux-xanmod-anbox kernel"
-  critical: false
-  hidden: false
-  selected: false
-  packages:
-    - linux-xanmod-anbox
-    - linux-xanmod-anbox-headers
-    - nvidia-dkms
-    - nvidia-settings
-    - nvidia-utils
 - name: "Nvidia Related"
   description: "Nvidia related applications"
   critical: false

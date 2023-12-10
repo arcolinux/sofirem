@@ -5,6 +5,7 @@
   selected: false
   expanded: true
   packages:
+    - amberol
     - ardour
     - audacious
     - audacious-plugins
@@ -69,6 +70,7 @@
     - plex-media-server
     - qtwebflix-git
     - simplescreenrecorder
+    - simplescreenrecorder-git
     - smplayer
     - vlc
     - youtube-dl
