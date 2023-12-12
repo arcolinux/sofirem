@@ -83,6 +83,7 @@
     - pikaur-git
     - rate-mirrors
     - rate-mirrors-bin
+    - skippy-xd-git
     - snapd
     - synapse
     - topgrade

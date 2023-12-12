@@ -496,7 +496,7 @@ def setup_headerbar(self, Gtk, settings):
 
         toolbutton = Gtk.ToolButton()
         # icon-name open-menu-symbolic / open-menu-symbolic.symbolic
-        toolbutton.set_icon_name("open-menu-symbolic.symbolic")
+        toolbutton.set_icon_name("open-menu-symbolic")
 
         toolbutton.connect("clicked", self.on_settings_clicked)
 

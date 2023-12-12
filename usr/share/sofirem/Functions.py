@@ -188,7 +188,7 @@ def on_close_create_packages_file():
     try:
         logger.info("App closing saving currently installed packages to file")
         packages_file = "%s-packages.txt" % datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        logger.info("Saving in %s/%s" % (log_dir, packages_file))
+        logger.info("Saving in %s%s" % (log_dir, packages_file))
         cmd = ["pacman", "-Q"]
 
         with subprocess.Popen(
@@ -307,6 +307,8 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
 
         # store process std out into a list, if there are errors display to user once the process completes
         process_stdout_lst = []
+        process_stdout_lst.append("Command = %s\n\n" % " ".join(cmd))
+
         with subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -375,7 +377,7 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
             # logger.debug("Pacman process return code = %s" % returncode)
 
             if returncode is not None:
-                logger.info("Pacman process completed running = %s" % cmd)
+                logger.info("Pacman process completed running = [ %s ]" % " ".join(cmd))
 
                 GLib.idle_add(
                     refresh_ui,
@@ -389,7 +391,9 @@ def start_subprocess(self, cmd, progress_dialog, action, pkg, widget):
                 )
             else:
                 # an error happened during the pacman transaction
-                logger.error("Pacman process failed when running %s" % cmd)
+                logger.error(
+                    "Pacman process failed when running = [ %s ]" % " ".join(cmd)
+                )
 
     except TimeoutError as t:
         logger.error("TimeoutError in %s start_subprocess(): %s" % (action, t))
@@ -800,6 +804,7 @@ def uninstall(self):
 # store a list of package metadata into memory for fast retrieval
 def store_packages():
     path = base_dir + "/yaml/"
+    cache = base_dir + "/cache/yaml-packages.lst"
     yaml_files = []
     packages = []
 
@@ -855,18 +860,24 @@ def store_packages():
                         package_name = line.strip("    - ").strip()
 
                         # get the package description
-                        package_desc = obtain_pkg_description(package_name)
+                        # package_desc = obtain_pkg_description(package_name)
 
                         package_version = "Unknown"
+                        package_description = "Unknown"
 
-                        for i in package_metadata:
-                            if i["name"] == package_name:
-                                package_version = i["version"]
+                        for data in package_metadata:
+                            if data["name"] == package_name:
+                                package_version = data["version"]
+                                package_description = data["description"]
+
                                 break
+
+                        if package_description == "Unknown":
+                            package_description = obtain_pkg_description(package_name)
 
                         package = Package(
                             package_name,
-                            package_desc,
+                            package_description,
                             category_name,
                             subcat_name,
                             subcat_desc,
@@ -896,20 +907,14 @@ def store_packages():
 
             category_name = pkg.category
 
-        """
-        Print dictionary for debugging
+        # Print dictionary for debugging
 
-        for key in category_dict.keys():
-            print("Category = %s" % key)
-            pkg_list = category_dict[key]
-
-            for pkg in pkg_list:
-                print(pkg.name)
-                #print(pkg.category)
-
-
-            print("++++++++++++++++++++++++++++++")
-        """
+        # for key in category_dict.keys():
+        #     print("Category = %s" % key)
+        #     pkg_list = category_dict[key]
+        #
+        #     for pkg in pkg_list:
+        #         print("%s" % pkg.name)
 
         sorted_dict = None
 
@@ -919,6 +924,13 @@ def store_packages():
             logger.error(
                 "An error occurred during sort of stored packages in store_packages()"
             )
+        else:
+            with open(cache, "w", encoding="UTF-8") as f:
+                for key in category_dict.keys():
+                    pkg_list = category_dict[key]
+
+                    for pkg in pkg_list:
+                        f.write("%s\n" % pkg.name)
 
         return sorted_dict
     except Exception as e:
@@ -959,6 +971,7 @@ def get_package_description(package):
 
 
 # get live package name, version info and repo name
+# used in store_packages() and get_installed_package_data()
 def get_all_package_info():
     query_str = ["pacman", "-Si"]
 
@@ -974,6 +987,8 @@ def get_all_package_info():
                 package_data = []
                 package_name = "Unknown"
                 package_version = "Unknown"
+                package_description = "Unknown"
+                package_repository = "Unknown"
 
                 for line in out.decode("utf-8").splitlines():
                     package_dict = {}
@@ -985,8 +1000,16 @@ def get_all_package_info():
                             line.replace(" ", "").split("Version:")[1].strip()
                         )
 
+                    if "Description     :" in line.strip():
+                        package_description = line.split("Description     :")[1].strip()
+
+                    if "Repository      :" in line.strip():
+                        package_repository = line.split("Repository      :")[1].strip()
+
                         package_dict["name"] = package_name
                         package_dict["version"] = package_version
+                        package_dict["description"] = package_description
+                        package_dict["repository"] = package_repository
 
                         package_data.append(package_dict)
 
@@ -1184,6 +1207,12 @@ def get_package_information(package_name):
             package_metadata["packager"] = pkg_packager
 
             return package_metadata
+
+        elif (
+            "error: package '%s' was not found\n" % package_name
+            in process_query_remote.stdout.decode("utf-8")
+        ):
+            return "error: package '%s' was not found" % package_name
         else:
             process_query_local = subprocess.run(
                 query_local_cmd,
@@ -1274,9 +1303,12 @@ def get_package_information(package_name):
 
 
 def get_current_installed():
+    logger.debug("Get currently installed packages")
     path = base_dir + "/cache/installed.lst"
+
     # query_str = "pacman -Q > " + path
     query_str = ["pacman", "-Q"]
+
     # run the query - using Popen because it actually suits this use case a bit better.
 
     subprocess_query = subprocess.Popen(
@@ -1285,7 +1317,7 @@ def get_current_installed():
         stdout=subprocess.PIPE,
     )
 
-    out, err = subprocess_query.communicate(timeout=60)
+    out, err = subprocess_query.communicate(timeout=process_timeout)
 
     # added validation on process result
     if subprocess_query.returncode == 0:
@@ -1301,6 +1333,8 @@ def query_pkg(package):
     try:
         package = package.strip()
         path = base_dir + "/cache/installed.lst"
+
+        pacman_localdb = base_dir + "/cache/pacman-localdb"
 
         if os.path.exists(path):
             if is_file_stale(path, 0, 0, 30):
@@ -1322,6 +1356,7 @@ def query_pkg(package):
                     return True
             # We will only hit here, if the pkg does not match anything in the file.
             # file.close()
+
         return False
     except Exception as e:
         logger.error("Exception in query_pkg(): %s " % e)
@@ -2212,6 +2247,50 @@ def check_package_installed(package_name):
 
         if package_name in process_pkg_installed.stdout.splitlines():
             return True
+        else:
+            # check if the package is in the local pacman db
+            if check_pacman_localdb(package_name):
+                return True
+            else:
+                return False
+
+    except subprocess.CalledProcessError:
+        # package is not installed
+        return False
+
+
+# =====================================================
+#       QUERY THE LOCAL PACMAN DB FOR PACKAGE
+# =====================================================
+
+# This is used to validate a package install/uninstall
+
+
+# check if package is installed or not
+def check_pacman_localdb(package_name):
+    query_str = ["pacman", "-Qi", package_name]
+
+    try:
+        process_pkg_installed = subprocess.run(
+            query_str,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=process_timeout,
+        )
+
+        if process_pkg_installed.returncode == 0:
+            for line in process_pkg_installed.stdout.decode("utf-8").splitlines():
+                if line.startswith("Name            :"):
+                    if line.replace(" ", "").split("Name:")[1].strip() == package_name:
+                        return True
+
+                if line.startswith("Replaces        :"):
+                    replaces = line.split("Replaces        :")[1].strip()
+                    if len(replaces) > 0:
+                        if package_name in replaces:
+                            return True
+
         else:
             return False
 
