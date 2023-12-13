@@ -40,7 +40,7 @@
   selected: false
   expanded: true
   packages:
-    - gitahead-bin
+    - gitahead
     - gitg
     - gitfiend
     - github-desktop-bin
