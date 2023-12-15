@@ -154,14 +154,14 @@ class PackageListDialog(Gtk.Dialog):
         self.hide()
         self.destroy()
 
-    def on_dialog_export_clicked(self, dialog, installed_packages_list):
+    def on_dialog_export_clicked(self, dialog, installed_packages_list_export):
         try:
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(
                     "# Created by Sofirem on %s\n"
                     % fn.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 )
-                for package in sorted(installed_packages_list):
+                for package in sorted(installed_packages_list_export):
                     f.write("%s\n" % (package[0]))
 
             if os.path.exists(filename):

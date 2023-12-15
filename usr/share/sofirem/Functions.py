@@ -1084,6 +1084,70 @@ def get_installed_package_data():
         logger.error("Exception in get_installed_package_data() : %s" % e)
 
 
+# get installed package version, installed date, name to be displayed inside PackageListDialog
+# for export and later import
+
+
+def get_installed_package_data_export():
+    # to capture the latest packages - no versions etc
+    latest_package_data = get_all_package_info()
+
+    query_str = ["pacman", "-Qqen"]
+
+    try:
+        installed_packages_list_export = []
+        pkg_name = None
+        pkg_version = None
+        pkg_install_date = None
+        pkg_installed_size = None
+        pkg_latest_version = None
+
+        with subprocess.Popen(
+            query_str,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=1,
+            universal_newlines=True,
+        ) as process:
+            for line in process.stdout:
+                if "Name            :" in line.strip():
+                    pkg_name = line.replace(" ", "").split("Name:")[1].strip()
+
+                if "Version         :" in line.strip():
+                    pkg_version = line.replace(" ", "").split("Version:")[1].strip()
+
+                if "Installed Size  :" in line.strip():
+                    pkg_installed_size = line.split("Installed Size  :")[1].strip()
+
+                if "Install Date    :" in line.strip():
+                    pkg_install_date = line.split("Install Date    :")[1].strip()
+
+                    # get the latest version lookup dictionary
+
+                    found = False
+                    pkg_latest_version = None
+
+                    for i in latest_package_data:
+                        if i["name"] == pkg_name:
+                            pkg_latest_version = i["version"]
+                            break
+
+                    installed_packages_list_export.append(
+                        (
+                            pkg_name,
+                            pkg_version,
+                            pkg_latest_version,
+                            pkg_installed_size,
+                            pkg_install_date,
+                        )
+                    )
+
+        return installed_packages_list_export
+
+    except Exception as e:
+        logger.error("Exception in get_installed_package_data() : %s" % e)
+
+
 # get list of files installed by a package
 def get_package_files(package_name):
     try:
