@@ -11,15 +11,16 @@ gi.require_version("Gtk", "3.0")
 
 base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # base_dir = os.path.dirname(os.path.realpath(__file__))
-filename = "%s/%s-installed-packages.x86_64.txt" % (
-    fn.export_dir,
-    fn.datetime.now().strftime("%Y-%m-%d"),
-)
 
 
 class PackageListDialog(Gtk.Dialog):
     def __init__(self):
         Gtk.Dialog.__init__(self)
+
+        self.filename = "%s/%s-installed-packages.x86_64.txt" % (
+            fn.export_dir,
+            fn.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"),
+        )
 
         self.set_resizable(True)
         self.set_size_request(800, 700)
@@ -40,15 +41,15 @@ class PackageListDialog(Gtk.Dialog):
         grid_packageslst.set_column_homogeneous(True)
 
         lbl_info = Gtk.Label(xalign=0, yalign=0)
-        lbl_info.set_text("Export destination %s" % filename)
+        lbl_info.set_text("Export destination %s" % self.filename)
 
         # get a list of installed packages on the system
 
-        installed_packages_list = fn.get_installed_package_data()
+        self.installed_packages_list = fn.get_installed_package_data()
 
-        if len(installed_packages_list) > 0:
+        if len(self.installed_packages_list) > 0:
             self.set_title(
-                "Showing %s installed packages" % len(installed_packages_list)
+                "Showing %s installed packages" % len(self.installed_packages_list)
             )
 
             search_entry = Gtk.SearchEntry()
@@ -59,7 +60,7 @@ class PackageListDialog(Gtk.Dialog):
             Gtk.Window.grab_focus(headerbar)
 
             treestore_packages = Gtk.TreeStore(str, str, str, str, str)
-            for item in sorted(installed_packages_list):
+            for item in sorted(self.installed_packages_list):
                 treestore_packages.append(None, list(item))
 
             treeview_packages = Gtk.TreeView()
@@ -109,9 +110,7 @@ class PackageListDialog(Gtk.Dialog):
             )
 
             btn_dialog_export = Gtk.Button(label="Export")
-            btn_dialog_export.connect(
-                "clicked", self.on_dialog_export_clicked, installed_packages_list
-            )
+            btn_dialog_export.connect("clicked", self.on_dialog_export_clicked)
             btn_dialog_export.set_size_request(100, 30)
             btn_dialog_export.set_halign(Gtk.Align.END)
 
@@ -154,26 +153,26 @@ class PackageListDialog(Gtk.Dialog):
         self.hide()
         self.destroy()
 
-    def on_dialog_export_clicked(self, dialog, installed_packages_list_export):
+    def on_dialog_export_clicked(self, dialog):
         try:
-            with open(filename, "w", encoding="utf-8") as f:
+            with open(self.filename, "w", encoding="utf-8") as f:
                 f.write(
                     "# Created by Sofirem on %s\n"
                     % fn.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 )
-                for package in sorted(installed_packages_list_export):
+                for package in sorted(self.installed_packages_list):
                     f.write("%s\n" % (package[0]))
 
-            if os.path.exists(filename):
+            if os.path.exists(self.filename):
                 fn.logger.info("Export completed")
 
                 # fix permissions, file is owned by root
-                fn.permissions(filename)
+                fn.permissions(self.filename)
 
                 message_dialog = MessageDialog(
                     "Info",
                     "Package export complete",
-                    "Package list exported to %s" % filename,
+                    "Package list exported to %s" % self.filename,
                     "",
                     "info",
                     False,
@@ -190,7 +189,7 @@ class PackageListDialog(Gtk.Dialog):
                 message_dialog = MessageDialog(
                     "Error",
                     "Package export failed",
-                    "Failed to export package list to %s." % filename,
+                    "Failed to export package list to %s." % self.filename,
                     "",
                     "error",
                     False,
