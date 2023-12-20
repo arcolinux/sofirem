@@ -583,6 +583,13 @@ def setup_headerbar(self, Gtk, settings):
         modelbtn_packages_export.props.centered = False
         modelbtn_packages_export.props.text = "Show Installed Packages"
 
+        # button to display import packages window
+        modelbtn_packages_import = Gtk.ModelButton()
+        modelbtn_packages_import.connect("clicked", self.on_packages_import_clicked)
+        modelbtn_packages_import.set_name("modelbtn_popover")
+        modelbtn_packages_import.props.centered = False
+        modelbtn_packages_import.props.text = "Import Packages"
+
         # button to show about dialog
         modelbtn_about_app = Gtk.ModelButton()
         modelbtn_about_app.connect("clicked", self.on_about_app_clicked)
@@ -705,6 +712,7 @@ def setup_headerbar(self, Gtk, settings):
         vbox_buttons = Gtk.Box(spacing=1, orientation=Gtk.Orientation.VERTICAL)
         vbox_buttons.pack_start(self.modelbtn_pacmanlog, False, True, 0)
         vbox_buttons.pack_start(modelbtn_packages_export, False, True, 0)
+        vbox_buttons.pack_start(modelbtn_packages_import, False, True, 0)
         vbox_buttons.pack_start(modelbtn_iso_packages_list, False, True, 0)
         vbox_buttons.pack_start(modelbtn_package_search, False, True, 0)
         vbox_buttons.pack_start(modelbtn_about_app, False, True, 0)

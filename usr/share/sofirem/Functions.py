@@ -48,7 +48,7 @@ pacman_conf = "/etc/pacman.conf"
 pacman_conf_backup = "/etc/pacman.conf.bak"
 pacman_logfile = "/var/log/pacman.log"
 pacman_lockfile = "/var/lib/pacman/db.lck"
-
+pacman_cache_dir = "/var/cache/pacman/pkg/"
 
 arco_test_repo = [
     "#[arcolinux_repo_testing]",
@@ -184,7 +184,7 @@ except Exception as e:
 
 
 # on app close create file of installed packages
-def on_close_create_packages_file():
+def _on_close_create_packages_file():
     try:
         logger.info("App closing saving currently installed packages to file")
         packages_file = "%s-packages.txt" % datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
@@ -1023,12 +1023,12 @@ def get_all_package_info():
 
 # get installed package version, installed date, name to be displayed inside PackageListDialog
 # for export and later import
-def get_installed_package_data():
+def get_installed_package_data(self):
     # to capture the latest package version
     latest_package_data = get_all_package_info()
 
     # query_str = ["pacman", "-Qi"]
-    query_str = ["pacman", "-Qien"]
+    # query_str = ["pacman", "-Qien"]
 
     try:
         installed_packages_list = []
@@ -1039,7 +1039,7 @@ def get_installed_package_data():
         pkg_latest_version = None
 
         with subprocess.Popen(
-            query_str,
+            self.pacman_export_cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=1,
@@ -1078,7 +1078,9 @@ def get_installed_package_data():
                         )
                     )
 
-        return installed_packages_list
+        self.pkg_export_queue.put(installed_packages_list)
+
+        # return installed_packages_list
 
     except Exception as e:
         logger.error("Exception in get_installed_package_data() : %s" % e)
@@ -2471,6 +2473,304 @@ def get_pacman_process():
 
     except Exception as e:
         logger.error("Exception in get_pacman_process() : %s" % e)
+
+
+# used inside PackageImportDialog to display package installation progress
+def update_package_import_textview(self, line):
+    try:
+        if len(line) > 0:
+            self.msg_buffer.insert(
+                self.msg_buffer.get_end_iter(),
+                " %s" % line,
+                len(" %s" % line),
+            )
+
+    except Exception as e:
+        logger.error("Exception in update_progress_textview(): %s" % e)
+    finally:
+        self.pkg_import_queue.task_done()
+        text_mark_end = self.msg_buffer.create_mark(
+            "end", self.msg_buffer.get_end_iter(), False
+        )
+        # scroll to the end of the textview
+        self.textview.scroll_mark_onscreen(text_mark_end)
+
+
+def monitor_package_import(self):
+    while True:
+        if self.stop_thread is True:
+            break
+        message = self.pkg_import_queue.get()
+        GLib.idle_add(
+            update_package_import_textview,
+            self,
+            message,
+            priority=GLib.PRIORITY_DEFAULT,
+        )
+
+        # time.sleep(0.2)
+
+
+# update the package install status label called from outside the main thread
+def update_package_status_label(label, text):
+    label.set_markup(text)
+
+
+def import_packages(self):
+    try:
+        packages_status_list = []
+        package_failed = False
+        package_err = {}
+
+        count = 0
+
+        # clean pacman cache
+
+        if os.path.exists(pacman_cache_dir):
+            query_pacman_clean_cache_str = ["pacman", "-Sc", "--noconfirm"]
+
+            logger.info("Cleaning Pacman cache directory = %s" % pacman_cache_dir)
+
+            event = "%s [INFO]: Cleaning pacman cache\n" % datetime.now().strftime(
+                "%Y-%m-%d-%H-%M-%S"
+            )
+
+            self.pkg_import_queue.put(event)
+
+            GLib.idle_add(
+                update_package_status_label,
+                self.label_package_status,
+                "Status: <b>Cleaning pacman cache</b>",
+            )
+
+            # clean the pacman cache, so we don't run into any invalid/corrupt package errors during install
+            process_pacman_cc = subprocess.Popen(
+                query_pacman_clean_cache_str,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+            )
+
+            out, err = process_pacman_cc.communicate(timeout=process_timeout)
+
+            self.pkg_import_queue.put(out)
+
+            if process_pacman_cc.returncode == 0:
+                logger.info("Pacman cache directory cleaned")
+            else:
+                logger.error("Failed to clean Pacman cache directory")
+
+            logger.info("Running full system upgrade")
+            # run full system upgrade, Arch does not allow partial package updates
+            query_str = ["pacman", "-Syu", "--noconfirm"]
+            # query_str = ["pacman", "-Qqen"]
+            logger.info("Running %s" % " ".join(query_str))
+
+            event = "%s [INFO]:Running full system upgrade\n" % datetime.now().strftime(
+                "%Y-%m-%d-%H-%M-%S"
+            )
+
+            self.pkg_import_queue.put(event)
+
+            GLib.idle_add(
+                update_package_status_label,
+                self.label_package_status,
+                "Status: <b>Performing full system upgrade - do not power off your system</b>",
+            )
+
+            output = []
+
+            with subprocess.Popen(
+                query_str,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                universal_newlines=True,
+            ) as process:
+                while True:
+                    if process.poll() is not None:
+                        break
+
+                    for line in process.stdout:
+                        # print(line.strip())
+
+                        self.pkg_import_queue.put(line)
+
+                        output.append(line)
+
+                    # time.sleep(0.2)
+
+            if process.returncode == 0:
+                logger.info("Pacman system upgrade completed")
+                GLib.idle_add(
+                    update_package_status_label,
+                    self.label_package_status,
+                    "Status: <b> Full system upgrade - completed</b>",
+                )
+            else:
+                if len(output) > 0:
+                    if "there is nothing to do" not in output:
+                        logger.error("Pacman system upgrade failed")
+                        GLib.idle_add(
+                            update_package_status_label,
+                            self.label_package_status,
+                            "Status: <b> Full system upgrade - failed</b>",
+                        )
+
+                        print("%s" % " ".join(output))
+
+                        event = "%s [ERROR]: Installation of packages aborted due to errors\n" % datetime.now().strftime(
+                            "%Y-%m-%d-%H-%M-%S"
+                        )
+
+                        self.pkg_import_queue.put(event)
+
+                        logger.error("Installation of packages aborted due to errors")
+
+                        return
+
+                    # do not proceed with package installs if system upgrade fails
+                    else:
+                        return
+
+            # iterate through list of packages, calling pacman -S on each one
+            for package in self.packages_list:
+                process_output = []
+                package = package.strip()
+                if len(package) > 0:
+                    if "#" not in package:
+                        query_str = ["pacman", "-S", package, "--needed", "--noconfirm"]
+
+                        count += 1
+
+                        logger.info("Running %s" % " ".join(query_str))
+
+                        event = "%s [INFO]: Running %s\n" % (
+                            datetime.now().strftime("%Y-%m-%d-%H-%M-%S"),
+                            " ".join(query_str),
+                        )
+
+                        self.pkg_import_queue.put(event)
+
+                        with subprocess.Popen(
+                            query_str,
+                            shell=False,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            bufsize=1,
+                            universal_newlines=True,
+                        ) as process:
+                            while True:
+                                if process.poll() is not None:
+                                    break
+                                for line in process.stdout:
+                                    process_output.append(line.strip())
+
+                                    self.pkg_import_queue.put(line)
+
+                                # time.sleep(0.2)
+
+                        if process.returncode == 0:
+                            # since this is being run in another thread outside of main, use GLib to update UI component
+                            GLib.idle_add(
+                                update_package_status_label,
+                                self.label_package_status,
+                                "Status: <b>%s</b> -> <b>Installed</b>" % package,
+                            )
+
+                            GLib.idle_add(
+                                update_package_status_label,
+                                self.label_package_count,
+                                "Progress: <b>%s/%s</b>"
+                                % (count, len(self.packages_list)),
+                            )
+
+                            packages_status_list.append("%s -> Installed" % package)
+
+                        else:
+                            logger.error("%s --> Install failed" % package)
+                            GLib.idle_add(
+                                update_package_status_label,
+                                self.label_package_status,
+                                "Status: <b>%s</b> -> <b>Install failed</b>" % package,
+                            )
+
+                            GLib.idle_add(
+                                update_package_status_label,
+                                self.label_package_count,
+                                "Progress: <b>%s/%s</b>"
+                                % (count, len(self.packages_list)),
+                            )
+
+                            if len(process_output) > 0:
+                                if "there is nothing to do" not in process_output:
+                                    logger.error("%s" % " ".join(process_output))
+                                    # store package error in dict
+                                    package_err[package] = " ".join(process_output)
+
+                            package_failed = True
+
+                            packages_status_list.append("%s -> Failed" % package)
+
+            if len(packages_status_list) > 0:
+                self.pkg_status_queue.put(packages_status_list)
+
+            if package_failed is True:
+                GLib.idle_add(
+                    update_package_status_label,
+                    self.label_package_status,
+                    "<b>Some packages have failed to install see %s</b>" % self.logfile,
+                )
+
+            # end
+            event = "%s [INFO]: Completed, check the logfile for any errors\n" % (
+                datetime.now().strftime("%Y-%m-%d-%H-%M-%S"),
+            )
+
+            self.pkg_import_queue.put(event)
+
+    except Exception as e:
+        logger.error("Exception in import_packages(): %s" % e)
+    finally:
+        self.pkg_err_queue.put(package_err)
+
+
+# package install completed now log status to log file
+def log_package_status(self):
+    logger.info("Logging package status")
+    packages_status_list = None
+    package_err = None
+    while True:
+        try:
+            time.sleep(0.2)
+            packages_status_list = self.pkg_status_queue.get()
+            package_err = self.pkg_err_queue.get()
+
+        finally:
+            self.pkg_status_queue.task_done()
+            self.pkg_err_queue.task_done()
+            with open(self.logfile, "w") as f:
+                f.write(
+                    "# This file was auto-generated by Sofirem on %s at %s\n"
+                    % (
+                        datetime.today().date(),
+                        datetime.now().strftime("%H:%M:%S"),
+                    ),
+                )
+                if packages_status_list is not None:
+                    for package in packages_status_list:
+                        if package.split("->")[0].strip() in package_err:
+                            f.write("%s\n" % package)
+                            f.write(
+                                "\tERROR: %s\n"
+                                % package_err[package.split("->")[0].strip()]
+                            )
+                        else:
+                            f.write("%s\n" % package)
+
+            break
 
 
 # ANYTHING UNDER THIS LINE IS CURRENTLY UNUSED!
