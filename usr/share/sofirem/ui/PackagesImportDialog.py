@@ -135,6 +135,14 @@ class PackagesImportDialog(Gtk.Dialog):
 
         self.connect("response", self.on_response)
 
+        vbox_log_dir = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+
+        btn_open_log_dir = Gtk.Button(label="Open log directory")
+        btn_open_log_dir.connect("clicked", self.on_open_log_dir_clicked)
+        btn_open_log_dir.set_size_request(100, 30)
+
+        vbox_log_dir.pack_start(btn_open_log_dir, False, False, 0)
+
         grid_message = Gtk.Grid()
 
         grid_message.attach(label_install_desc, 0, 0, 1, 1)
@@ -143,8 +151,12 @@ class PackagesImportDialog(Gtk.Dialog):
 
         grid_message.attach(self.scrolled_window, 0, 3, 1, 1)
         grid_message.attach(lbl_padding2, 0, 4, 1, 1)
+        grid_message.attach(vbox_log_dir, 0, 5, 1, 1)
 
         self.vbox.add(grid_message)
+
+    def on_open_log_dir_clicked(self, widget):
+        fn.open_log_dir()
 
     def display_progress(self):
         self.textview.destroy()
