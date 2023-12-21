@@ -1,11 +1,3 @@
-- name: "ArcoLinux Third Party Packages"
-  description: "ArcoLinux third party packages"
-  critical: false
-  hidden: false
-  selected: false
-  expanded: true
-  packages:
-    - arcolinux-pamac-all
 - name: "ArcoLinux Meta Packages"
   description: "ArcoLinux meta packages"
   critical: false
