@@ -45,7 +45,6 @@
   packages:
     - celluloid
     - clapper
-    - filebot
     - freetube-bin
     - guvcview
     - handbrake

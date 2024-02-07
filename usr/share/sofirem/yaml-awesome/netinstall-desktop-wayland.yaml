@@ -4,14 +4,12 @@
   hidden: false
   selected: false
   immutable: false
-  expanded: true
+  expanded: false
   packages:
     - archlinux-logout-git
     - arcolinux-hyprland-git
-    - arcolinux-hyprland-profile-git
     - arcolinux-kitty-git
-    - arcolinux-wayland-profile-git
-    - hyprland-dev
+    - hyprland-git
     - kitty
     - swaybg
     - thunar
@@ -25,14 +23,12 @@
   hidden: false
   selected: false
   immutable: false
-  expanded: true
+  expanded: false
   packages:
     - archlinux-logout-git
     - arcolinux-kitty-git
     - arcolinux-nwg-drawer-git
     - arcolinux-sway-git
-    - arcolinux-sway-profile-git
-    - arcolinux-wayland-profile-git
     - kitty
     - nwg-drawer-bin
     - rofi-lbonn-wayland-only-git
@@ -43,4 +39,47 @@
     - swaylock
     - ttf-iosevka-nerd
     - waybar
-
+- name: "Desktop: Wayfire - Wayland"
+  description: "Installs wayfire - only on real metal"
+  critical: false
+  hidden: false
+  selected: false
+  immutable: false
+  expanded: false
+  packages:
+    - a-candy-beauty-icon-theme-git
+    - archlinux-logout-git
+    - arcolinux-foot-git
+    - arcolinux-kitty-git
+    - arcolinux-rofi-git
+    - arcolinux-rofi-themes-git
+    - arcolinux-wallpapers-wayfire-git
+    - arcolinux-wayfire-dconf-git
+    - arcolinux-wayfire-nemesis-git
+    - arcolinux-xfce-git
+    - feh
+    - foot
+    - grim
+    - kitty
+    - libdisplay-info
+    - mako
+    - polkit-gnome
+    - rofi-lbonn-wayland
+    - slurp
+    - swaybg
+    - swayidle
+    - swaylock
+    - swww
+    - thunar
+    - ttf-font-awesome
+    - ttf-jetbrains-mono-nerd
+    - waybar
+    - wayfire-git
+    - wayfire-plugins-extra-git
+    - wcm-git
+    - wf-kill-git
+    - wf-shell-git
+    - wl-clipboard
+    - wofi
+    - xdg-desktop-portal-wlr
+    - xfce4-terminal

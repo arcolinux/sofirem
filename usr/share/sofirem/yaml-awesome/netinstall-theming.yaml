@@ -132,7 +132,6 @@
   selected: false
   expanded: true
   packages:
-    - kvantum
     - kvantum-qt5-git
     - kvantum-qt6-git
     - kvantum-theme-materia

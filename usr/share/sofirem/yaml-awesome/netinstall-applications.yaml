@@ -63,8 +63,7 @@
   selected: false
   expanded: true
   packages:
-    - tor-browser
-    - tor
+    - torbrowser-launcher
     - privoxy
 - name: "Virtualbox for Linux kernel"
   description: "Installs virtualbox for linux kernel"
