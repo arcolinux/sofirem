@@ -752,6 +752,52 @@
     - mate-extra
     - mate-tweak
     - xfce4-terminal
+- name: "Desktop: Nimdow"
+  description: "Installs nimdow desktop"
+  critical: false
+  hidden: false
+  selected: false
+  packages:
+    - alacritty
+    - archlinux-logout-git
+    - arcolinux-btop-git
+    - arcolinux-config-all-desktops-git
+    - arcolinux-gtk3-sardi-arc-git
+    - arcolinux-dconf-all-desktops-git
+    - arcolinux-nimdow-git
+    - arcolinux-powermenu-git
+    - arcolinux-rofi-git
+    - arcolinux-rofi-themes-git
+    - arcolinux-root-git
+    - archlinux-tweak-tool-git
+    - arcolinux-volumeicon-git
+    - arcolinux-wallpapers-git
+    - arcolinux-xfce-git
+    - btop
+    - dmenu
+    - feh
+    - lxappearance
+    - nim
+    - nimdow-bin
+    - nitrogen
+    - picom
+    - polkit-gnome
+    - rofi
+    - rofi-theme-fonts
+    - sxhkd
+    - thunar
+    - thunar-archive-plugin
+    - thunar-media-tags-plugin
+    - thunar-volman
+    - ttf-jetbrains-mono-nerd
+    - ttf-hack
+    - volumeicon
+    - xfce4-notifyd
+    - xfce4-power-manager
+    - xfce4-screenshooter
+    - xfce4-settings
+    - xfce4-taskmanager
+    - xfce4-terminal
 - name: "Desktop: Openbox"
   description: "Installs openbox desktop"
   critical: false

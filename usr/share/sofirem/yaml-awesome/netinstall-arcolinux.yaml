@@ -1,3 +1,12 @@
+- name: "ArcoLinux Plasma Packages"
+  description: "ArcoLinux plasma packages"
+  critical: false
+  hidden: false
+  selected: false
+  expanded: true
+  packages:
+    - arcolinux-plasma-keybindings-git
+    - arcolinux-plasma-servicemenus-git
 - name: "ArcoLinux Meta Packages"
   description: "ArcoLinux meta packages"
   critical: false
@@ -25,7 +34,8 @@
   packages:
     - archlinux-logout-git
     - archlinux-tweak-tool-git
-    - arcolinux-desktop-trasher-git    
+    - arcolinux-desktop-trasher-git
+    - arcolinux-powermenu-git
     - arcolinux-reflector-simple-git
     - arcolinux-teamviewer
     - arcolinux-tellme-git

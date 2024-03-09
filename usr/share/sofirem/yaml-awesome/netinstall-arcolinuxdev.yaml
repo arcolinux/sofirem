@@ -6,6 +6,7 @@
   expanded: true
   packages:
     - arcolinux-local-xfce4-git
+    - arcolinux-powermenu-git
     - arcolinux-xfce-git
     - discord
     - firefox
