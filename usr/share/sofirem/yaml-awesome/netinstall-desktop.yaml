@@ -877,6 +877,10 @@
   hidden: false
   selected: false
   packages:
+    - arcolinux-plasma-theme-candy-beauty-arc-dark-git
+    - arcolinux-plasma-theme-candy-beauty-nordic-git
+    - arcolinux-plasma-theme-surfn-arc-dark-git
+    - arcolinux-plasma-theme-surfn-nordic-git
     - plasma
     - kde-accessibility-meta
     - kde-education-meta
@@ -890,11 +894,6 @@
     - kde-utilities-meta
     - kdevelop-meta   
     - arcolinux-arc-kde
-    - arcolinux-config-plasma-git
-    - arcolinux-gtk3-surfn-arc-breeze-git
-    - arcolinux-plasma-dconf-git
-    - arcolinux-plasma-git
-    - arcolinux-plasma-kservices-git
     - arcolinux-root-git
     - archlinux-tweak-tool-git
     - arcolinux-wallpapers-git
@@ -917,10 +916,9 @@
     - okular
     - packagekit-qt5
     - partitionmanager
-    - sddm-kcm
     - spectacle
-    - surfn-arc-breeze-icons-git
-    - systemd-kcm
+    - surfn-plasma-dark-icons-git
+    - surfn-plasma-light-icons-git
     - yakuake
 - name: "Desktop: Qtile"
   description: "Installs qtile desktop"
