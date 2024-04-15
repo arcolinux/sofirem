@@ -13,7 +13,6 @@
     - android-sdk-platform-tools
     - android-tools
     - appimagelauncher
-    - archey3
     - aura-bin
     - auto-cpufreq
     - bauh
@@ -63,7 +62,7 @@
     - gufw
     - gummy
     - hardcode-fixer-git
-    - hardinfo-gtk3
+    - hardinfo2
     - hddtemp
     - htop
     - hw-probe

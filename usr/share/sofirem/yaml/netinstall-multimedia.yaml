@@ -12,7 +12,6 @@
     - audacity
     - byte
     - cava
-    - clementine
     - curseradio-git
     - deadbeef
     - deezer
@@ -35,6 +34,7 @@
     - spotify
     - spotifywm-git
     - spotify-adblock-git
+    - strawberry
     - tauon-music-box
 - name: "Video Software"
   description: "Primarily Video software"
