@@ -25,7 +25,6 @@
     - brillo
     - btop
     - btrbk
-    - caffeine-ng
     - catfish
     - ckb-next-git
     - cpu-x
@@ -124,8 +123,6 @@
     - topgrade-bin
     - topgrade-git
     - trizen
-    - tuxboot
-    - tuxboot-git
     - ufetch-git
     - ulauncher
     - upower

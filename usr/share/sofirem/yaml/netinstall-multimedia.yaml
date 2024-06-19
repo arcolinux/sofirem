@@ -45,11 +45,9 @@
   packages:
     - celluloid
     - clapper
-    - filebot
     - freetube-bin
     - guvcview
     - handbrake
-    - hypnotix
     - juk
     - kazam
     - kdenlive
