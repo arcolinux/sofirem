@@ -5,13 +5,10 @@
   selected: false
   expanded: true
   packages:
-    - arcolinux-local-xfce4-git
-    - arcolinux-xfce-git
     - discord
     - firefox
     - flameshot-git
-    - gitahead
-    - gitahead-bin
+    - gitahead-git
     - meld
     - scrot
     - simplescreenrecorder
