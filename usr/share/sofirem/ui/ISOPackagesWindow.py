@@ -14,52 +14,13 @@ base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 
 arcolinux_isos = [
-    "arcolinuxs-xanmod-iso",
-    "arcolinuxs-zen-iso",
-    "arcolinuxs-lts-iso",
-    "arcolinuxs-iso",
-    "arcolinuxl-iso",
-    "arcolinuxd-iso",
+    "arconet-iso",
+    "arcopro-iso",
+    "arcoplasma-iso",
 ]
 
-arcolinuxb_isos = [
-    "arco-sway",
-    "arco-plasma",
-    "arco-hyprland",
-    "arco-chadwm",
-    "arco-dusk",
-    "arco-dwm",
-    "arco-berry",
-    "arco-hypr",
-    "arco-enlightenment",
-    "arco-xtended",
-    "arco-pantheon",
-    "arco-awesome",
-    "arco-bspwm",
-    "arco-cinnamon",
-    "arco-budgie",
-    "arco-cutefish",
-    "arco-cwm",
-    "arco-deepin",
-    "arco-gnome",
-    "arco-fvwm3",
-    "arco-herbstluftwm",
-    "arco-i3",
-    "arco-icewm",
-    "arco-jwm",
-    "arco-leftwm",
-    "arco-lxqt",
-    "arco-mate",
-    "arco-openbox",
-    "arco-qtile",
-    "arco-spectrwm",
-    "arco-ukui",
-    "arco-wmderland",
-    "arco-xfce",
-    "arco-xmonad",
-]
 
-github_arcolinux_packagelist = "https://raw.githubusercontent.com/${ARCOLINUX}/${ISO}/master/archiso/packages.x86_64"
+github_arcolinux_packagelist = "https://raw.githubusercontent.com/arconetpro/${ISO}/refs/heads/main//archiso/packages.x86_64"
 headers = {"Content-Type": "text/plain;charset=UTF-8"}
 
 
@@ -350,9 +311,6 @@ class ISOPackagesWindow(Gtk.Window):
         for arco_iso in arcolinux_isos:
             self.combo_iso.append_text(arco_iso)
 
-        for arco_isob in sorted(arcolinuxb_isos):
-            self.combo_iso.append_text(arco_isob)
-
     def build_gui(self):
         try:
             lbl_select_iso = Gtk.Label(xalign=0, yalign=0)
@@ -365,7 +323,7 @@ class ISOPackagesWindow(Gtk.Window):
             lbl_padding2.set_text("")
 
             self.combo_iso = Gtk.ComboBoxText()
-            self.combo_iso.set_wrap_width(3)
+            self.combo_iso.set_wrap_width(1)
             self.combo_iso.set_entry_text_column(0)
             self.combo_iso.connect("changed", self.on_combo_iso_changed)
 
