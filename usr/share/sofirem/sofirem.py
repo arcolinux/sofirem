@@ -119,6 +119,11 @@ class Main(Gtk.Window):
             print(
                 "---------------------------------------------------------------------------"
             )
+            print("[INFO] : User = " + fn.sudo_username)
+            fn.findgroup()
+            print(
+                "---------------------------------------------------------------------------"
+            )
 
             if os.path.exists(fn.sofirem_lockfile):
                 running = fn.check_if_process_running("sofirem")
