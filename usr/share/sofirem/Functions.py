@@ -82,7 +82,7 @@ config_file = "%s/sofirem.yaml" % config_dir
 
 event_log_file = "%s/event.log" % log_dir
 
-export_dir = "%s/sofirem-exports" % home
+export_dir = "%s/.config/sofirem-exports" % home
 
 
 # =====================================================
