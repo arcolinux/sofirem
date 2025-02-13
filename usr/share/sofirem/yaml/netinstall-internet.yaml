@@ -53,6 +53,7 @@
     - insync
     - megasync-bin
     - nextcloud-client
+    - pcloud-drive
 - name: "Mail Clients"
   description: "Mail clients"
   critical: false
