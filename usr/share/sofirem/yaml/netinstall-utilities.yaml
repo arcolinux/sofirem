@@ -63,7 +63,6 @@
     - hardinfo2
     - hddtemp
     - htop
-    - hw-probe
     - ifuse
     - inxi
     - kbackup
