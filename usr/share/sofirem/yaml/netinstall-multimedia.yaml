@@ -36,6 +36,7 @@
     - spotify-adblock-git
     - strawberry
     - tauon-music-box
+    - tenacity
 - name: "Video Software"
   description: "Primarily Video software"
   critical: false
