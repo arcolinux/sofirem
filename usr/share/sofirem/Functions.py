@@ -1455,7 +1455,6 @@ def cache(package, path_dir_cache):
                 "ttf-hack",
                 "ttf-roboto-mono",
                 "aisleriot",
-                "mailspring",
                 "linux-rt",
                 "linux-rt-headers",
                 "linux-rt-lts",
