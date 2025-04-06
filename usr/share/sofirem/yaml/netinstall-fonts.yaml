@@ -9,7 +9,6 @@
     - adobe-source-sans-fonts
     - adobe-source-serif-fonts
     - awesome-terminal-fonts
-    - libertinus-font
     - lohit-fonts
     - nerd-fonts-source-code-pro
     - noto-fonts
@@ -40,6 +39,7 @@
     - ttf-joypixels
     - ttf-lato
     - ttf-liberation
+    - ttf-libertinus
     - ttf-linux-libertine
     - ttf-linux-libertine-g
     - ttf-meslo-nerd-font-powerlevel10k
